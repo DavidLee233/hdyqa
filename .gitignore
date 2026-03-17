@@ -3,6 +3,8 @@ target/
 logs/
 sysware-ui/dist/
 sysware-ui/node_modules/
+需求.txt
+
 
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
