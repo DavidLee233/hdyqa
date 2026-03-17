@@ -1,0 +1,4 @@
+version: 1
+display_name: Master Data Platform
+short_description: Extend the sysware master data platform with sync, backup, and downstream APIs.
+default_prompt: Continue implementing the master data platform in this repository by following the local rules, current baseline, and phase prompts.

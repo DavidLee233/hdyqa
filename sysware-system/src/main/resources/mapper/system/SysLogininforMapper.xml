@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysLogininforMapper">
+
+    <resultMap type="SysLogininfor" id="SysLogininforResult">
+        <result property="infoId" column="info_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="ipaddr" column="ipaddr"/>
+        <result property="loginLocation" column="login_location"/>
+        <result property="browser" column="browser"/>
+        <result property="os" column="os"/>
+        <result property="status" column="status"/>
+        <result property="msg" column="msg"/>
+        <result property="loginTime" column="login_time"/>
+    </resultMap>
+
+    <sql id="selectSysLogininforVo">
+        select
+            t.info_id,
+            t.user_name,
+            t.ipaddr,
+            t.login_location,
+            t.browser,
+            t.os,
+            t.status,
+            t.msg,
+            t.login_time
+        from sys_logininfor t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysLogininforVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectLogininforList" parameterType="SysLogininforBo" resultMap="SysLogininforResult">
+        <include refid="selectSysLogininforVo"/>
+        <where>
+            <if test="infoId != null  and infoId != ''"> and info_id = #{infoId}</if>
+            <if test="userName != null  and userName != ''"> and user_name = #{userName}</if>
+            <if test="ipaddr != null  and ipaddr != ''"> and ipaddr = #{ipaddr}</if>
+            <if test="loginLocation != null  and loginLocation != ''"> and login_location = #{loginLocation}</if>
+            <if test="browser != null  and browser != ''"> and browser = #{browser}</if>
+            <if test="os != null  and os != ''"> and os = #{os}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="msg != null  and msg != ''"> and msg = #{msg}</if>
+
+            <!-- 使用 create_time 进行时间范围查询 -->
+            <if test="beginTime != null and beginTime != '' and endTime != null and endTime != ''">
+                and login_time between
+                str_to_date(concat(#{beginTime}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+                and
+                str_to_date(concat(#{endTime}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+            </if>
+            <!-- 如果只传了开始时间 -->
+            <if test="beginTime != null and beginTime != '' and (endTime == null or endTime == '')">
+                and login_time >= str_to_date(concat(#{beginTime}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+            </if>
+            <!-- 如果只传了结束时间 -->
+            <if test="endTime != null and endTime != '' and (beginTime == null or beginTime == '')">
+                and login_time &lt;= str_to_date(concat(#{endTime}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by login_time
+    </select>
+
+</mapper> 

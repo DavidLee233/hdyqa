@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.mainData.mapper.HdlMainDataMappingMapper">
+
+    <resultMap type="com.sysware.mainData.domain.HdlMainDataMapping" id="HdlMainDataMappingResult">
+        <result property="mapId" column="map_id"/>
+        <result property="sourceField" column="source_field"/>
+        <result property="targetField" column="target_field"/>
+        <result property="fieldMeaning" column="field_meaning"/>
+        <result property="type" column="type"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createId" column="create_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateId" column="update_id"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+
+
+    <sql id="selectHdlMainDataMappingVo">
+        select
+            t.map_id,
+            t.source_field,
+            t.target_field,
+            t.field_meaning,
+            t.type,
+            t.create_by,
+            t.create_id,
+            t.create_time,
+            t.update_by,
+            t.update_id,
+            t.update_time
+        from hdl_main_data_mapping t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectHdlMainDataMappingVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <!-- 根据类型查询字段映射 -->
+    <select id="selectMainDataMappingByType" parameterType="String" resultMap="HdlMainDataMappingResult">
+        <include refid="selectHdlMainDataMappingVo"/>
+        where type = #{type}
+        order by target_field
+    </select>
+</mapper>

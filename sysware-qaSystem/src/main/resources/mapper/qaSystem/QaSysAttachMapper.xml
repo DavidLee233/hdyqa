@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.qa.mapper.QaSysAttachMapper">
+
+    <resultMap type="com.sysware.qa.domain.QaSysAttach" id="QaSysAttachResult">
+        <result property="id" column="id"/>
+        <result property="recordId" column="record_id"/>
+        <result property="ossId" column="oss_id"/>
+        <result property="name" column="name"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="isDeleted" column="is_deleted"/>
+        <result property="attachType" column="attach_type"/>
+        <result property="url" column="url"/>
+    </resultMap>
+
+
+
+    <sql id="selectQaSysAttachVo">
+        select
+                t.id,
+                t.record_id,
+                t.oss_id,
+                t.name,
+                t.file_size,
+                t.create_time,
+                t.create_by,
+                t.is_deleted,
+                t.attach_type,
+                t.url
+         from qa_sys_attach t
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectQaSysAttachVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectByRecordIdAndType" resultType="com.sysware.qa.domain.vo.QaSysAttachVo">
+        SELECT
+            t.id,
+            t.create_by,
+            t.record_id,
+            t.create_time,
+            t.oss_id,
+            t.name,
+            t.file_size,
+            t.is_deleted,
+            t.attach_type,
+            t.url
+        FROM
+            qa_sys_attach t
+        WHERE
+            t.record_id = #{recordId} AND t.attach_type = #{attachType}
+    </select>
+
+    <select id="selectByOssId" resultType="com.sysware.qa.domain.vo.QaSysAttachVo">
+        SELECT
+            t.id,
+            t.create_by,
+            t.record_id,
+            t.create_time,
+            t.oss_id,
+            t.name,
+            t.file_size,
+            t.is_deleted,
+            t.attach_type,
+            t.url
+        FROM
+            qa_sys_attach t
+        WHERE
+            t.oss_id = #{ossId}
+    </select>
+
+    <select id="selectByRecordId" resultType="com.sysware.qa.domain.vo.QaSysAttachVo">
+        SELECT
+            t.id,
+            t.create_by,
+            t.record_id,
+            t.create_time,
+            t.oss_id,
+            t.name,
+            t.file_size,
+            t.is_deleted,
+            t.attach_type,
+            t.url
+        FROM
+            qa_sys_attach t
+        WHERE
+            t.record_id = #{recordId}
+    </select>
+
+</mapper>

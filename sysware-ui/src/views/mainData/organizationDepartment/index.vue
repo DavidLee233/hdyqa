@@ -1,0 +1,836 @@
+<template>
+  <div class="app-container">
+    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="100px" class="search-form">
+      <!-- 搜索字段 - 使用固定标签 -->
+      <el-form-item label="部门名称" prop="name">
+        <el-input
+          v-model="queryParams.name"
+          placeholder="请输入部门名称"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="部门编码" prop="code">
+        <el-input
+          v-model="queryParams.code"
+          placeholder="请输入部门编码"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="部门简称" prop="shortName">
+        <el-input
+          v-model="queryParams.shortName"
+          placeholder="请输入部门简称"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="互联网掩护名" prop="internetName">
+        <el-input
+          v-model="queryParams.internetName"
+          placeholder="请输入互联网掩护名"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="组织部门标识" prop="sign">
+        <el-input
+          v-model="queryParams.sign"
+          placeholder="请输入组织部门标识"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
+
+    <el-row :gutter="10" class="mb8">
+      <!-- 数据源切换按钮组 -->
+      <el-col :span="2.5">
+        <div class="data-source-switch">
+          <el-button-group>
+            <el-button
+              :type="dataSource === 'local' ? 'primary' : 'default'"
+              size="mini"
+              @click="switchDataSource('local')"
+              :title="dataSource === 'local' ? '当前查看本地数据' : '切换到本地数据'">
+              <i class="el-icon-s-home"></i>
+              本地数据
+            </el-button>
+            <el-button
+              :type="dataSource === 'remote' ? 'primary' : 'default'"
+              size="mini"
+              @click="switchDataSource('remote')"
+              :title="dataSource === 'remote' ? '当前查看院主数据' : '切换到院主数据'">
+              <i class="el-icon-cloudy"></i>
+              院主数据
+            </el-button>
+          </el-button-group>
+          <div class="data-source-indicator">
+            <span class="indicator-dot" :class="{ active: dataSource === 'local' }"></span>
+            <span class="indicator-dot" :class="{ active: dataSource === 'remote' }"></span>
+          </div>
+        </div>
+      </el-col>
+      <!-- 只有本地数据时显示操作按钮 -->
+      <template v-if="dataSource === 'local'">
+        <el-col :span="1.5">
+          <el-button
+            type="primary"
+            plain
+            icon="el-icon-plus"
+            size="mini"
+            @click="handleAdd"
+          >新增</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button
+            type="success"
+            plain
+            icon="el-icon-edit"
+            size="mini"
+            :disabled="single"
+            @click="handleUpdate"
+          >修改</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button
+            type="danger"
+            plain
+            icon="el-icon-delete"
+            size="mini"
+            :disabled="multiple"
+            @click="handleDelete"
+          >删除</el-button>
+        </el-col>
+      </template>
+      <el-col :span="1.5">
+        <el-button
+          type="warning"
+          plain
+          icon="el-icon-download"
+          size="mini"
+          @click="handleExport"
+          :loading="exportLoading"
+        >导出</el-button>
+      </el-col>
+      <right-toolbar :showSearch.sync="showSearch" :searchValue.sync="queryParams.searchValue" @queryTable="getList"></right-toolbar>
+    </el-row>
+
+<!--    &lt;!&ndash; 数据源状态显示 &ndash;&gt;-->
+<!--    <div class="data-source-status">-->
+<!--      <el-tag-->
+<!--        :type="dataSource === 'local' ? 'success' : 'info'"-->
+<!--        size="medium"-->
+<!--        effect="light">-->
+<!--        <i :class="dataSource === 'local' ? 'el-icon-s-home' : 'el-icon-cloudy'"></i>-->
+<!--        {{ dataSource === 'local' ? '本地数据' : '院主数据' }}-->
+<!--        <span class="mode-indicator">-->
+<!--          {{ dataSource === 'local' ? '(可编辑)' : '(只读)' }}-->
+<!--        </span>-->
+<!--      </el-tag>-->
+<!--    </div>-->
+
+    <!-- 远程数据提示 -->
+    <div v-if="dataSource === 'remote'" class="remote-tip">
+      <el-alert
+        title="院主数据（只读模式）"
+        type="info"
+        :closable="false"
+        show-icon>
+        <span>当前查看的是院主数据，数据来源于远程数据库(139.10.2.90)，此处为只读模式。</span>
+      </el-alert>
+    </div>
+
+    <el-table v-loading="loading" :data="organizationDepartmentList" @selection-change="handleSelectionChange">
+      <!-- 只有本地数据时显示选择列 -->
+      <el-table-column type="selection" width="55" align="center"/>
+      <el-table-column label="序号" align="center">
+        <template slot-scope="scope">
+          <span>{{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}</span>
+        </template>
+      </el-table-column>
+      <!-- 表格列使用动态字段绑定 -->
+      <el-table-column label="部门排序" align="center" prop="deptOrder" />
+      <el-table-column label="部门名称" align="center" prop="name" />
+      <el-table-column label="部门编码" align="center" prop="code" />
+      <el-table-column label="启用状态" align="center" prop="enableState" />
+      <el-table-column label="部门简称" align="center" prop="shortName" />
+      <el-table-column label="互联网掩护名称" align="center" prop="internetName" />
+      <el-table-column label="组织部门标识" align="center" prop="sign" />
+      <!-- 本地数据时显示操作列 -->
+      <el-table-column v-if="dataSource === 'local'" label="操作" align="center" class-name="small-padding fixed-width" width="180">
+        <template slot-scope="scope">
+          <el-button
+            size="mini"
+            type="text"
+            icon="el-icon-edit"
+            @click="handleUpdate(scope.row)"
+          >编辑</el-button>
+          <el-button
+            size="mini"
+            type="text"
+            icon="el-icon-delete"
+            @click="handleDelete(scope.row)"
+          >删除</el-button>
+        </template>
+      </el-table-column>
+
+      <!-- 远程数据时显示数据源标识 -->
+      <el-table-column v-if="dataSource === 'remote'" label="数据来源" align="center" width="100">
+        <template>
+          <el-tag size="mini" type="info">远程</el-tag>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <pagination
+      v-show="total>0"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
+      :page-sizes="[10, 20, 50, 100, 200]"
+      @pagination="getList"
+    />
+
+    <!-- 添加或修改综合办物品出门流程对话框 -->
+    <el-dialog :title="title" :visible.sync="open" width="85%" append-to-body class="goodsOut-dialog">
+      <el-form ref="form" :model="form" :rules="rules" label-width="80px" label-position="right">
+        <!-- 组织部门信息 -->
+        <div class="form-section">
+          <div class="section-header">
+            <i class="el-icon-user"></i>
+            <span>组织部门信息</span>
+          </div>
+          <el-row :gutter="30">
+            <el-col :span="8">
+              <!-- 以下三个选项均禁用选择 -->
+              <el-form-item label="部门名称" prop="name">
+                <el-input v-model="form.name" placeholder="请输入部门名称"/>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="部门排序" prop="deptOrder">
+                <el-input v-model="form.deptOrder" placeholder="请输入部门排序"/>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="部门编码" prop="code">
+                <el-input v-model="form.code" placeholder="请输入部门编码"/>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="30">
+            <el-col :span="8">
+              <!-- 以下三个选项均禁用选择 -->
+              <el-form-item label="部门标识" prop="sign">
+                <el-input v-model="form.sign" placeholder="请输入部门标识"/>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="部门简称" prop="shortName">
+                <el-input v-model="form.shortName" placeholder="请输入部门简称"/>
+              </el-form-item>
+            </el-col>
+            <el-col :span="8">
+              <el-form-item label="掩护名称" prop="internetName" style="white-space: nowrap;">
+                <el-input v-model="form.internetName" placeholder="请输入部门互联网掩护名称"/>
+              </el-form-item>
+            </el-col>
+          </el-row>
+        </div>
+      </el-form>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitForm">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import {
+  listOrganizationDepartment,
+  getOrganizationDepartment,
+  delOrganizationDepartment,
+  addOrganizationDepartment,
+  updateOrganizationDepartment, listRemoteOrganizationDepartment,
+} from "@/api/mainData/organizationDepartment";
+import {getUser} from "@/api/qaSystem/qaCommon";
+import { getFieldMappingByType } from "@/api/mainData/mainDataMapping";
+
+export default {
+  name: "OrganizationDepartment",
+  data() {
+    return {
+      userName: null,
+      loginName: null,
+      userId: null,
+      // 遮罩层
+      loading: true,
+      // 导出遮罩层
+      exportLoading: false,
+      // 选中数组
+      ids: [],
+      // 非单个禁用
+      single: true,
+      // 非多个禁用
+      multiple: true,
+      // 显示搜索条件
+      showSearch: true,
+      // 总条数
+      total: 0,
+      // 左侧表格数据
+      organizationDepartmentList: [],
+      // 弹出层标题
+      title: "",
+      // 是否显示表单
+      open: false,
+      // 查询参数
+      queryParams: {
+        pageNum: 1,
+        pageSize: 10,
+        searchValue: null,
+        sortField: null,
+        sortOrder: null,
+        name: null,
+        code: null,
+        shortName: null,
+        internetName: null,
+        sign: null
+      },
+      // 表单参数
+      form: {
+        pkDept: null,
+        createId: this.$store.state.user.id,
+        createBy: null,
+        createTime: null,
+        manualFilter: null,
+        virtualDeptFlag: null,
+        flag: null,
+        deptOrder: null,
+        name: null,
+        code: null,
+        pkFatherOrder: null,
+        pkOrg: null,
+        enableState: null,
+        superiorDept: null,
+        shortName: null,
+        sign: null,
+        internetName: null,
+        oldPkDept: null,
+        oldCode: null,
+        oldPkFatherOrg: null,
+        updateId: null,
+        updateBy: null,
+        updateTime: null,
+      },
+      // 表单校验
+      rules: {
+        name:[
+          { required: true, message: '部门名称不能为空', trigger: 'blur' },
+        ],
+        code:[
+          { required: true, message: '部门编码不能为空', trigger: 'blur' },
+        ],
+        shortName: [
+          { required: true, message: '部门简称不能为空', trigger: 'blur' }
+        ],
+        internetName: [
+          { required: true, message: '部门互联网掩护名不能为空', trigger: 'blur' }
+        ],
+      },
+
+      // 数据源类型：local-本地，remote-远程
+      dataSource: 'local',
+      // 字段映射配置
+      fieldMapping: [],
+    };
+  },
+
+  created() {
+    this.getCurrentUser();
+    this.getList();
+    this.loadFieldMapping();
+  },
+
+  methods: {
+    /**                      初始化方法                     */
+    /** 加载字段映射配置 */
+    async loadFieldMapping() {
+      try {
+        // 假设字段类型为1表示组织部门映射
+        const response = await getFieldMappingByType({ type: '0' });  // 查询部门字段映射列表
+        if (response.code === 200) {
+          this.fieldMapping = response.data || [];
+        }
+      } catch (error) {
+        console.error("加载字段映射失败", error);
+        this.fieldMapping = [];
+      }
+    },
+
+    /** 将查询参数转换为远程格式 */
+    convertToRemoteQuery(query) {
+      // 新接口中，后端会处理字段映射，前端只需要传递原始参数
+      const remoteQuery = {
+        pageNum: query.pageNum - 1, // 远程接口从0开始
+        pageSize: query.pageSize,
+      };
+
+      // 添加查询条件
+      if (query.name) remoteQuery.name = query.name;
+      if (query.code) remoteQuery.code = query.code;
+      if (query.shortName) remoteQuery.shortName = query.shortName;
+      if (query.internetName) remoteQuery.internetName = query.internetName;
+      if (query.sign) remoteQuery.sign = query.sign;
+      return remoteQuery;
+    },
+
+    /** 查询参数列表 */
+    getList() {
+      this.loading = true;
+      let apiParams = { ...this.queryParams };
+
+      // 如果是远程数据，需要转换查询参数
+      if (this.dataSource === 'remote') {
+        apiParams = this.convertToRemoteQuery(this.queryParams);
+      }
+
+      // 根据数据源选择API
+      const apiPromise = this.dataSource === 'local' ?
+        listOrganizationDepartment(apiParams) :
+        listRemoteOrganizationDepartment(apiParams);
+
+      apiPromise.then(response => {
+        let data = response.rows || [];
+        let total = response.total || 0;
+
+        this.organizationDepartmentList = data;
+        this.total = total;
+        this.loading = false;
+      }).catch(error =>{
+        console.error("获取数据失败", error);
+        this.loading = false;
+      });
+    },
+
+    /** 获取当前用户信息  */
+    getCurrentUser(){
+      getUser().then(response => {
+        if(response.code === 200){
+          this.userName = response.data.createBy;
+          // 工号
+          this.loginName = response.data.createId;
+          // 用户唯一ID
+          this.userId = response.data.userId;
+        }else{
+          this.$message.error(`无此用户，请联系管理员`);
+        }
+      }).catch(error => {
+        console.error(`无此用户，请联系管理员`, error);
+      });
+    },
+
+    /**                      按钮方法                     */
+    /** 切换数据源 */
+    switchDataSource(source) {
+      if (this.dataSource === source) {
+        // 已经是当前数据源，不执行切换
+        return;
+      }
+      this.dataSource = source;
+      // 根据切换方向显示不同的提示
+      if (source === 'local') {
+        this.$message.success('已切换到本地数据（可编辑模式）');
+      } else {
+        this.$message.info('已切换到院主数据（只读模式）');
+      }
+      // 清空选择
+      this.ids = [];
+      this.single = true;
+      this.multiple = true;
+      // 重置查询并重新加载数据
+      this.resetQuery();
+    },
+    /**   表单重置   */
+    reset() {
+      this.form = {
+        pkDept: null,
+        createId: this.$store.state.user.id,
+        createBy: null,
+        createTime: null,
+        manualFilter: null,
+        virtualDeptFlag: null,
+        flag: null,
+        deptOrder: null,
+        name: null,
+        code: null,
+        pkFatherOrder: null,
+        pkOrg: null,
+        enableState: null,
+        superiorDept: null,
+        shortName: null,
+        sign: null,
+        internetName: null,
+        oldPkDept: null,
+        oldCode: null,
+        oldPkFatherOrg: null,
+        updateId: null,
+        updateBy: null,
+        updateTime: null,
+      };
+      this.resetForm("form");
+    },
+
+    /** 搜索按钮操作 */
+    handleQuery() {
+      this.queryParams.pageNum = 1;
+      this.getList();
+    },
+
+    /** 重置按钮操作 */
+    resetQuery() {
+      // 直接重置整个 queryParams 对象
+      this.queryParams = {
+        pageNum: 1,
+        pageSize: this.queryParams.pageSize, // 保留当前的分页大小
+        searchValue: null,
+        name: null,
+        code: null,
+        shortName: null,
+        internetName: null,
+        sign: null
+      };
+      // 如果需要重置表单验证状态
+      if (this.$refs.queryForm) {
+        this.$refs.queryForm.resetFields();
+      }
+      this.handleQuery();
+    },
+
+    /** 多选框选中数据 */
+    handleSelectionChange(selection) {
+      this.ids = selection.map(item => item.pkDept)
+      this.single = selection.length!==1
+      this.multiple = !selection.length
+    },
+
+    /** 新增按钮操作 */
+    handleAdd() {
+      // 远程数据不允许新增
+      if (this.dataSource === 'remote') {
+        this.$message.warning('院主数据为只读模式，无法新增数据');
+        return;
+      }
+      this.reset();
+      this.form.createBy = this.userName;
+      this.form.createId = this.loginName;
+      this.open = true;
+      this.title = "主数据组织部门添加数据";
+    },
+
+    /** 修改按钮操作 */
+    handleUpdate(row) {
+      // 远程数据不允许修改
+      if (this.dataSource === 'remote') {
+        this.$message.warning('院主数据为只读模式，无法修改数据');
+        return;
+      }
+      this.reset();
+      const deptId = row.pkDept || this.ids
+      getOrganizationDepartment(deptId).then(response => {
+        // 已解决form传递值出现的问题
+        this.form = response.data;
+        this.open = true;
+        this.title = "主数据组织部门修改数据";
+      });
+    },
+
+    /** 问题表单提交按钮 */
+    submitForm() {
+      this.$refs["form"].validate(valid => {
+        if (valid) {
+          const isUpdate = !!this.form.pkDept;
+          const operation = isUpdate ? updateOrganizationDepartment(this.form) : addOrganizationDepartment(this.form);
+          operation.then(response => {
+            if(response.code === 200){
+              this.$message.success(`${isUpdate ? '修改' : '新增'}成功`);
+              this.open = false;
+              this.getList();
+            }else{
+              this.$message.error(`${isUpdate ? '修改' : '新增'}失败` || response.msg);
+            }
+          }).catch(error => {
+            console.error(`${isUpdate ? '修改' : '新增'}失败`, error);
+          });
+        }
+      });
+    },
+
+    /**   取消按钮   */
+    cancel() {
+      this.open = false;
+      this.reset();
+    },
+
+    /** 删除按钮操作 */
+    handleDelete(row) {
+      // 远程数据不允许删除
+      if (this.dataSource === 'remote') {
+        this.$message.warning('院主数据为只读模式，无法删除数据');
+        return;
+      }
+      const deptId = row.pkDept || this.ids;
+      this.$modal.confirm('是否确认删除编号为"' + deptId + '"的数据项？').then(function() {
+        return delOrganizationDepartment(deptId);
+      }).then(() => {
+        this.getList();
+        this.$modal.msgSuccess("删除成功");
+      }).catch(() => {});
+    },
+
+    /** 导出按钮操作 */
+    handleExport() {
+      const confirmMessage = this.dataSource === 'local'
+        ? '是否确认导出本地数据？'
+        : '是否确认导出院主数据？';
+      this.$confirm(confirmMessage, "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      }).then(() => {
+        this.exportLoading = true;
+        let queryParams = { ...this.queryParams };
+        let exportUrl = '/mainData/organizationDepartment/export';
+        // 如果是远程数据，需要转换查询参数
+        if (this.dataSource === 'remote') {
+          queryParams = this.convertToRemoteQuery(this.queryParams);
+          exportUrl = '/mainData/organizationDepartment/exportRemote';
+        }
+        const filename = `组织部门数据_${this.dataSource === 'local' ? '本地' : '远程'}_${new Date().getTime()}.xlsx`;
+        this.download(exportUrl, queryParams, filename)
+          .finally(() => {
+            this.exportLoading = false;
+          });
+      }).catch(() => {
+        this.exportLoading = false;
+      });
+    },
+  }
+}
+</script>
+
+<style scoped>
+.app-container {
+  padding: 20px;
+}
+
+.el-table-column--selection .cell {
+  text-align: center !important;
+}
+
+.goodsOut-dialog :deep(.el-dialog__body) {
+  padding: 20px;
+  margin-bottom: 0;
+}
+
+.form-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ebeef5;
+}
+
+.section-header i {
+  font-size: 20px;
+  color: #409EFF;
+  margin-right: 8px;
+}
+
+.section-header span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.search-form {
+  background: #f5f7fa;
+  padding: 20px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  width: 220px;
+}
+
+.borrow-dialog :deep(.el-dialog__body) {
+  padding: 20px 30px;
+}
+
+.form-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ebeef5;
+}
+
+.section-header i {
+  font-size: 20px;
+  color: #409EFF;
+  margin-right: 8px;
+}
+
+.section-header span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.custom-input :deep(.el-input__inner) {
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+  transition: all 0.3s;
+}
+
+.custom-input :deep(.el-input__inner:hover),
+.custom-input :deep(.el-input__inner:focus) {
+  border-color: #409EFF;
+}
+
+.custom-date-picker {
+  width: 100%;
+}
+
+.custom-textarea :deep(.el-textarea__inner) {
+  border-radius: 4px;
+}
+
+.dialog-footer {
+  text-align: right;
+  padding-top: 0px;
+}
+
+@media screen and (max-width: 768px) {
+  .form-section {
+    padding: 15px;
+  }
+
+  .section-header {
+    margin-bottom: 15px;
+  }
+}
+
+.section-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.upload-tip {
+  color: #C03639;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.selected-table-section {
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.selected-table-section .section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #ebeef5;
+}
+
+.selected-table-section .section-header i {
+  font-size: 20px;
+  color: #67C23A;
+  margin-right: 8px;
+}
+
+.selected-table-section .section-header span {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+/* 数据源切换按钮样式 */
+.data-source-info {
+  margin-left: 5px;
+  font-size: 12px;
+  color: #909399;
+  font-weight: normal;
+}
+
+/* 远程数据提示 */
+.remote-tip {
+  margin-bottom: 15px;
+}
+
+/* 远程数据标签 */
+.el-tag--info {
+  background-color: #f4f4f5;
+  border-color: #e9e9eb;
+  color: #909399;
+}
+
+/* 搜索表单 */
+.search-form {
+  background: #f5f7fa;
+  padding: 20px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+/* 表格操作列 */
+.small-padding.fixed-width {
+  padding: 8px 0;
+}
+
+/* 响应式调整 */
+@media screen and (max-width: 768px) {
+  .app-container {
+    padding: 10px;
+  }
+
+  .search-form {
+    padding: 15px;
+  }
+
+  .el-form-item {
+    width: 100%;
+  }
+}
+</style>

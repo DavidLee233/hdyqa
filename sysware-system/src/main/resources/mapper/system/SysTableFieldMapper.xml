@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysTableFieldMapper">
+
+    <resultMap type="com.sysware.system.domain.SysTableField" id="SysTableFieldResult">
+        <result property="id" column="id"/>
+        <result property="userid" column="userid"/>
+        <result property="pageName" column="page_name"/>
+        <result property="slotName" column="slot_name"/>
+        <result property="menuId" column="menuId"/>
+        <result property="type" column="type"/>
+        <result property="width" column="width"/>
+        <result property="align" column="align"/>
+        <result property="label" column="label"/>
+        <result property="prop" column="prop"/>
+        <result property="visible" column="visible"/>
+        <result property="sortable" column="sortable"/>
+        <result property="sort" column="sort"/>
+        <result property="dateSelect" column="date_select"/>
+        <result property="searchable" column="searchable"/>
+        <result property="fixedLocation" column="fixed_location"/>
+        <result property="highLight" column="high_light"/>
+        <result property="onlyShow" column="only_show"/>
+        <result property="projectType" column="project_type"/>
+    </resultMap>
+
+    <sql id="selectSysTableFieldVo">
+        select
+            t.id,
+            t.user_id,
+            t.path,
+            t.menu_id,
+            t.page_name,
+            t.type,
+            t.width,
+            t.align,
+            t.label,
+            t.prop,
+            t.sortable,
+            t.date_select,
+            t.searchable,
+            t.sort,
+            t.slot_name,
+            t.visible,
+            t.fixed_location,
+            t.high_light,
+            t.only_show,
+            t.project_type
+        from sys_table_field t
+        order by t.sort
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysTableFieldVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+</mapper>

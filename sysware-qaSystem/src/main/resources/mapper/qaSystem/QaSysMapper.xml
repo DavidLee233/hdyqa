@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.qa.mapper.QaSysMapper">
+
+    <resultMap type="com.sysware.qa.domain.QaSys" id="QaSysResult">
+        <result property="recordId" column="record_id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createId" column="create_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="title" column="title"/>
+        <result property="questionContent" column="question_content"/>
+        <result property="answerContent" column="answer_content"/>
+        <result property="status" column="status"/>
+        <result property="type" column="type"/>
+        <result property="severity" column="severity"/>
+        <result property="canSolve" column="can_solve"/>
+        <result property="track" column="track"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateId" column="update_id"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="solveTime" column="solve_time"/>
+        <result property="department" column="department"/>
+        <result property="telephone" column="telephone"/>
+        <result property="roomNumber" column="room_number"/>
+        <result property="classification" column="classification"/>
+        <result property="notify" column="notify"/>
+        <result property="note" column="note"/>
+        <result property="visits" column="visits"/>
+    </resultMap>
+
+
+
+    <sql id="selectQaSysVo">
+        select
+                t.record_id,
+                t.create_by,
+                t.create_id,
+                t.create_time,
+                t.title,
+                t.question_content,
+                t.answer_content,
+                t.status,
+                t.type,
+                t.severity,
+                t.can_solve,
+                t.track,
+                t.update_by,
+                t.update_id,
+                t.update_time,
+                t.solve_time,
+                t.department,
+                t.telephone,
+                t.room_number,
+                t.classification,
+                t.notify,
+                t.note,
+                t.visits
+         from qa_sys t
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectQaSysVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectQaDataByRange" resultType="com.sysware.qa.domain.vo.QaSysVo">
+        SELECT
+            t.record_id,
+            t.create_by,
+            t.create_id,
+            t.create_time,
+            t.title,
+            t.question_content,
+            t.answer_content,
+            t.status,
+            t.type,
+            t.severity,
+            t.can_solve,
+            t.track,
+            t.update_by,
+            t.update_id,
+            t.update_time,
+            t.solve_time,
+            t.department,
+            t.telephone,
+            t.room_number,
+            t.classification,
+            t.notify,
+            t.note,
+            t.visits
+        FROM
+            qa_sys t
+        WHERE
+            t.solve_time BETWEEN #{startDate} AND #{endDate}
+        ORDER BY
+            t.solve_time DESC
+    </select>
+
+    <update id="updateVisits">
+        update qa_sys
+        set visits = visits + 1
+        where record_id = #{recordId}
+    </update>
+
+    <select id="selectByAdminNotify" resultMap="QaSysResult">
+        select t.record_id,
+               t.notify,
+               t.note
+        from (<include refid="selectQaSysVo"/>) t
+        where (t.create_by = 'QAadmin' OR t.update_by = 'QAadmin') AND t.notify = 1
+    </select>
+
+    <select id="selectByQuestionNotify" resultMap="QaSysResult">
+        select t.record_id,
+        t.notify,
+        t.note
+        from (<include refid="selectQaSysVo"/>) t
+        where t.create_id = #{createId} AND t.status = '已处理' AND t.notify = 1
+    </select>
+
+    <select id="selectByAnswerNotify" resultMap="QaSysResult">
+        select t.record_id,
+        t.notify,
+        t.note
+        from (<include refid="selectQaSysVo"/>) t
+        where t.update_id = #{updateId} AND t.status = '待处理' AND t.notify = 1
+    </select>
+
+</mapper>

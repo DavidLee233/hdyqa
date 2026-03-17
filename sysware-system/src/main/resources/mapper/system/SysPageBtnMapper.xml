@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysPageBtnMapper">
+
+    <resultMap type="com.sysware.system.domain.SysPageBtn" id="SysPageBtnResult">
+        <result property="id" column="id"/>
+        <result property="btnId" column="btn_id"/>
+        <result property="type" column="type"/>
+        <result property="icon" column="icon"/>
+        <result property="size" column="size"/>
+        <result property="location" column="location"/>
+        <result property="text" column="text"/>
+        <result property="showText" column="show_text"/>
+        <result property="permission" column="permission"/>
+        <result property="disabledType" column="disabled_type"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="pagePath" column="page_path"/>
+        <result property="functionName" column="function_name"/>
+        <result property="title" column="title"/>
+        <result property="openType" column="open_type"/>
+        <result property="direction" column="direction"/>
+        <result property="formId" column="form_id"/>
+        <result property="submitEventName" column="submit_event_name"/>
+        <result property="confirmText" column="confirm_text"/>
+        <result property="cancelText" column="cancel_text"/>
+        <result property="popConfirmIcon" column="pop_confirm_icon"/>
+        <result property="color" column="color"/>
+        <result property="msg" column="msg"/>
+        <result property="sort" column="sort"/>
+        <result property="tipContent" column="tip_content"/>
+    </resultMap>
+
+
+
+    <sql id="selectSysPageBtnVo">
+        select
+            t.id,
+            t.btn_id,
+            t.type,
+            t.icon,
+            t.size,
+            t.location,
+            t.text,
+            t.show_text,
+            t.permission,
+            t.disabled_type,
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.page_path,
+            t.function_name,
+            t.title,
+            t.open_type,
+            t.direction,
+            t.form_id,
+            t.submit_event_name,
+            t.confirm_text,
+            t.cancel_text,
+            t.pop_confirm_icon,
+            t.color,
+            t.msg,
+            t.sort,
+            t.tip_content
+        from sys_page_btn t order by sort asc
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysPageBtnVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+
+</mapper>

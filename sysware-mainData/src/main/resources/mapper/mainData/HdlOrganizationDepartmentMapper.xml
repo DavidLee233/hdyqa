@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.mainData.mapper.HdlOrganizationDepartmentMapper">
+
+    <resultMap type="com.sysware.mainData.domain.HdlOrganizationDepartment" id="HdlOrganizationDepartmentResult">
+        <result property="pkDept" column="pk_dept"/>
+        <result property="manualFilter" column="manual_filter"/>
+        <result property="virtualDeptFlag" column="virtual_dept_flag"/>
+        <result property="flag" column="flag"/>
+        <result property="deptOrder" column="dept_order"/>
+        <result property="name" column="name"/>
+        <result property="code" column="code"/>
+        <result property="pkFatherOrder" column="pk_father_order"/>
+        <result property="pkOrg" column="pk_org"/>
+        <result property="enableState" column="enable_state"/>
+        <result property="superiorDept" column="superior_dept"/>
+        <result property="shortName" column="short_name"/>
+        <result property="sign" column="sign"/>
+        <result property="internetName" column="internet_name"/>
+        <result property="oldPkDept" column="old_pk_dept"/>
+        <result property="oldCode" column="old_code"/>
+        <result property="oldPkFatherOrg" column="old_pk_father_org"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createId" column="create_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateId" column="update_id"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+
+
+    <sql id="selectHdlOrganizationDepartmentVo">
+        select
+                t.pk_dept, 
+                t.manual_filter, 
+                t.virtual_dept_flag, 
+                t.flag, 
+                t.dept_order, 
+                t.name, 
+                t.code, 
+                t.pk_father_order, 
+                t.pk_org, 
+                t.enable_state, 
+                t.superior_dept, 
+                t.short_name, 
+                t.sign, 
+                t.internet_name, 
+                t.old_pk_dept, 
+                t.old_code, 
+                t.old_pk_father_org, 
+                t.create_by, 
+                t.create_id, 
+                t.create_time, 
+                t.update_by, 
+                t.update_id, 
+                t.update_time
+         from hdl_organization_department t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectHdlOrganizationDepartmentVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectOrgDeptList" parameterType="HdlOrganizationDepartment" resultMap="HdlOrganizationDepartmentResult">
+        select u.* from (<include refid="selectHdlOrganizationDepartmentVo"/>) u
+        <if test="name != null and name != ''">
+            AND u.name like concat('%', #{name}, '%')
+        </if>
+    </select>
+
+</mapper>

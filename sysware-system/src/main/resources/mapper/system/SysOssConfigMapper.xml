@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysOssConfigMapper">
+
+    <resultMap type="com.sysware.system.domain.SysOssConfig" id="SysOssConfigResult">
+        <result property="ossConfigId" column="oss_config_id"/>
+        <result property="configKey" column="config_key"/>
+        <result property="accessKey" column="access_key"/>
+        <result property="secretKey" column="secret_key"/>
+        <result property="bucketName" column="bucket_name"/>
+        <result property="prefix" column="prefix"/>
+        <result property="endpoint" column="endpoint"/>
+        <result property="isHttps" column="is_https"/>
+        <result property="region" column="region"/>
+        <result property="accessPolicy" column="access_policy"/>
+        <result property="status" column="status"/>
+        <result property="ext1" column="ext1"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+        <result property="domain" column="domain"/>
+    </resultMap>
+
+
+
+    <sql id="selectSysOssConfigVo">
+        select
+            t.oss_config_id,
+            t.config_key,
+            t.access_key,
+            t.secret_key,
+            t.bucket_name,
+            t.prefix,
+            t.endpoint,
+            t.is_https,
+            t.region,
+            t.access_policy,
+            t.status,
+            t.ext1,
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.remark,
+            t.domain
+        from sys_oss_config t
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysOssConfigVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+
+</mapper>

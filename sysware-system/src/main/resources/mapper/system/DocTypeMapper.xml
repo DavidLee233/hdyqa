@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.DocTypeMapper">
+
+    <resultMap type="com.sysware.system.domain.DocType" id="DocTypeResult">
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="docTypeId" column="doc_type_id"/>
+        <result property="docTypeName" column="doc_type_name"/>
+        <result property="docTypeCode" column="doc_type_code"/>
+        <result property="sort" column="sort"/>
+        <result property="description" column="description"/>
+        <result property="autoArchive" column="auto_archive"/>
+        <result property="createStatus" column="create_status"/>
+        <result property="autoTotal" column="auto_total"/>
+        <result property="autoRecordNo" column="auto_record_no"/>
+        <result property="projectType" column="project_type"/>
+        <result property="independentTotal" column="independent_total"/>
+    </resultMap>
+
+
+
+    <sql id="selectDocTypeVo">
+        select
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.doc_type_id,
+            t.doc_type_name,
+            t.doc_type_code,
+            t.sort,
+            t.description,
+            t.auto_archive,
+            t.create_status,
+            t.auto_total,
+            t.auto_record_no,
+            t.project_type,
+            t.independent_total
+        from hdy_doc_type t
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectDocTypeVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+
+</mapper>

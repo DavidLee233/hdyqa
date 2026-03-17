@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.qa.mapper.QaUserQuestionMapper">
+
+    <resultMap type="com.sysware.qa.domain.QaUserQuestion" id="QaUserQuestionResult">
+        <result property="userId" column="user_id"/>
+        <result property="typeId" column="type_id"/>
+        <result property="id" column="id"/>
+    </resultMap>
+
+    <sql id="selectQaUserQuestionVo">
+        select
+            t.user_id,
+            t.question_id,
+            t.id
+        from qa_user_question t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectQaUserQuestionVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <resultMap type="com.sysware.qa.domain.vo.QaUserQuestionVo" id="QaUserQuestionVoResult">
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="loginName" column="login_name"/>
+        <result property="typeId" column="type_id"/>
+        <result property="type" column="type"/>
+        <result property="id" column="id"/>
+    </resultMap>
+
+    <sql id="selectQaUserQuestionNewVo">
+        select
+            q.user_id,
+            q.type_id,
+            q.id,
+            qt.type,
+            qt.sequence,
+            su.user_name,
+            su.login_name
+        FROM qa_user_question q
+                 LEFT JOIN sys_user su ON su.user_id = q.user_id
+                 LEFT JOIN qa_question_type qt ON q.type_id = qt.type_id
+    </sql>
+
+    <select id="selectNewVoPage" resultMap="QaUserQuestionVoResult">
+        SELECT t.* from (
+        <include refid="selectQaUserQuestionNewVo"></include> ) t
+        ${ew.customSqlSegment}
+    </select>
+
+    <select id="selectNewVoById" resultType="com.sysware.qa.domain.vo.QaUserQuestionVo">
+        SELECT t.* from (
+        <include refid="selectQaUserQuestionNewVo"></include> ) t
+        WHERE t.id = #{id}
+    </select>
+
+    <select id="selectNewVoByTypeId" resultType="com.sysware.qa.domain.vo.QaUserQuestionVo">
+        SELECT
+            t.user_id,
+            t.user_name,
+            t.login_name
+        from ( <include refid="selectQaUserQuestionNewVo"></include> ) t
+        WHERE t.type_id = #{typeId}
+    </select>
+
+    <select id="selectNewVoByType" resultType="com.sysware.qa.domain.vo.QaUserQuestionVo">
+        select
+            su.user_name,
+            su.login_name
+        FROM qa_user_question q
+                 LEFT JOIN sys_user su ON su.user_id = q.user_id
+                 LEFT JOIN qa_question_type qt ON q.type_id = qt.type_id
+        WHERE qt.type = #{type}
+    </select>
+
+</mapper>

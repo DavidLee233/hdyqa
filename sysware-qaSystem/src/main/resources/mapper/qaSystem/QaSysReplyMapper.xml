@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.qa.mapper.QaSysReplyMapper">
+
+    <resultMap type="com.sysware.qa.domain.QaSysReply" id="QaSysReplyResult">
+        <result property="replyId" column="reply_id"/>
+        <result property="recordId" column="record_id"/>
+        <result property="content" column="content"/>
+        <result property="createId" column="create_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="createBy" column="create_by"/>
+        <result property="thumbsUp" column="thumbs_up"/>
+        <result property="remind" column="remind"/>
+        <result property="replyToId" column="reply_to_id"/>
+        <result property="replyToUser" column="reply_to_user"/>
+    </resultMap>
+
+
+
+    <sql id="selectQaSysReplyVo">
+        select
+                t.reply_id,
+                t.record_id,
+                t.content,
+                t.create_id,
+                t.create_time,
+                t.create_by,
+                t.thumbs_up,
+                t.remind,
+                t.reply_to_id,
+                t.reply_to_user
+         from qa_sys_reply t
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectQaSysReplyVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectByRecordId" resultType="com.sysware.qa.domain.vo.QaSysReplyVo">
+        select * from qa_sys_reply
+        where record_id = #{recordId}
+    </select>
+
+    <update id="thumbsUp">
+        update qa_sys_reply
+        set thumbs_up = thumbs_up + 1
+        where reply_id = #{replyId}
+    </update>
+
+</mapper>

@@ -1,0 +1,107 @@
+package com.sysware.mainData.controller;
+
+import java.util.List;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
+import cn.hutool.core.bean.BeanUtil;
+import com.sysware.mainData.domain.HdlPersonBasicInfo;
+import com.sysware.mainData.domain.HdlPersonJobInfo;
+import com.sysware.mainData.domain.vo.HdlPersonBasicInfoVo;
+import lombok.RequiredArgsConstructor;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.*;
+import cn.dev33.satoken.annotation.SaCheckPermission;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
+import com.sysware.common.annotation.RepeatSubmit;
+import com.sysware.common.annotation.Log;
+import com.sysware.common.core.controller.BaseController;
+import com.sysware.common.core.domain.PageQuery;
+import com.sysware.common.core.domain.R;
+import com.sysware.common.core.validate.AddGroup;
+import com.sysware.common.core.validate.EditGroup;
+import com.sysware.common.core.validate.QueryGroup;
+import com.sysware.common.enums.BusinessType;
+import com.sysware.common.utils.poi.ExcelUtil;
+import com.sysware.mainData.domain.vo.HdlPersonJobInfoVo;
+import com.sysware.mainData.domain.bo.HdlPersonJobInfoBo;
+import com.sysware.mainData.service.IHdlPersonJobInfoService;
+import com.sysware.common.core.page.TableDataInfo;
+
+/**
+ * 员工工作信息数据
+ *
+ * @author aa
+ * @date 2026-01-15
+ */
+@Validated
+@RequiredArgsConstructor
+@RestController
+@RequestMapping("/mainData/personJobInfo")
+public class HdlPersonJobInfoController extends BaseController {
+
+    private final IHdlPersonJobInfoService iHdlPersonJobInfoService;
+
+    /**
+     * 查询员工工作信息数据列表
+     */
+    @GetMapping("/list")
+    public TableDataInfo list(HdlPersonJobInfoBo bo, PageQuery pageQuery) {
+        return iHdlPersonJobInfoService.queryPageList(bo, pageQuery);
+    }
+
+    /**
+     * 导出员工工作信息数据列表
+     */
+    @Log(title = "员工工作信息数据", businessType = BusinessType.EXPORT)
+    @PostMapping("/export")
+    public void export(HdlPersonJobInfo pji, HttpServletResponse response) {
+        List<HdlPersonJobInfo> list = iHdlPersonJobInfoService.selectPJIList(pji);
+        List<HdlPersonJobInfoVo> listVo = BeanUtil.copyToList(list, HdlPersonJobInfoVo.class);
+        ExcelUtil.exportExcel(listVo, "员工基本信息数据", HdlPersonJobInfoVo.class, response);
+    }
+
+    /**
+     * 获取员工工作信息数据详细信息
+     *
+     * @param pkPsnjob 主键
+     */
+    @GetMapping("/{pkPsnjob}")
+    public R<HdlPersonJobInfoVo> getInfo(@NotNull(message = "主键不能为空")
+                                     @PathVariable String pkPsnjob) {
+        return R.ok(iHdlPersonJobInfoService.queryById(pkPsnjob));
+    }
+
+    /**
+     * 新增员工工作信息数据
+     */
+    @Log(title = "员工工作信息数据", businessType = BusinessType.INSERT)
+    @RepeatSubmit()
+    @PostMapping()
+    public R<Void> add(@Validated(AddGroup.class) @RequestBody HdlPersonJobInfoBo bo) {
+        return toAjax(iHdlPersonJobInfoService.insertByBo(bo));
+    }
+
+    /**
+     * 修改员工工作信息数据
+     */
+    @Log(title = "员工工作信息数据", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PutMapping()
+    public R<Void> edit(@Validated(EditGroup.class) @RequestBody HdlPersonJobInfoBo bo) {
+        return toAjax(iHdlPersonJobInfoService.updateByBo(bo));
+    }
+
+    /**
+     * 删除员工工作信息数据
+     *
+     * @param pkPsnjobs 主键串
+     */
+    @Log(title = "员工工作信息数据", businessType = BusinessType.DELETE)
+    @DeleteMapping("/{pkPsnjobs}")
+    public R<Void> remove(@NotEmpty(message = "主键不能为空")
+                          @PathVariable String[] pkPsnjobs) {
+        return toAjax(iHdlPersonJobInfoService.deleteWithValidByIds(Arrays.asList(pkPsnjobs), true));
+    }
+}

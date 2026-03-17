@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysFormFieldMapper">
+
+    <resultMap type="SysFormField" id="SysFormFieldResult">
+        <id property="fieldId" column="field_id"/>
+        <result property="createdBy" column="CREATED_BY"/>
+        <result property="createdTime" column="CREATED_TIME"/>
+        <result property="formId" column="form_id"/>
+        <result property="type" column="type"/>
+        <result property="prop" column="prop"/>
+        <result property="label" column="label"/>
+        <result property="required" column="required"/>
+        <result property="rules" column="rules"/>
+        <result property="props" column="props"/>
+        <result property="initRequest" column="init_request"/>
+        <result property="searchable" column="searchable"/>
+        <result property="url" column="url"/>
+        <result property="method" column="method"/>
+        <result property="keyword" column="keyword"/>
+        <result property="dateType" column="date_type"/>
+        <result property="defaultCss" column="default_css"/>
+        <result property="disabledDateType" column="disabled_date_type"/>
+        <result property="span" column="span"/>
+        <result property="disabledDateDays" column="disabled_date_days"/>
+        <result property="sort" column="sort"/>
+        <result property="updateField" column="update_field"/>
+        <result property="filterParams" column="filter_params"/>
+        <result property="defaultValue" column="default_value"/>
+        <result property="disabled" column="disabled"/>
+        <result property="multiple" column="multiple"/>
+        <result property="showabled" column="showabled"/>
+        <result property="dynamicLabel" column="dynamic_label"/>
+        <result property="ruleCount"  column="ruleCount"/>
+        <result property="visibleCount"  column="visibleCount"/>
+        <result property="remark" column="remark"/>
+        <result property="fileType" column="file_type"/>
+        <collection property="ruleList" javaType="java.util.List" resultMap="SysFormFieldRulesResult"/>
+        <collection property="visible" javaType="java.util.List" resultMap="SysFormFieldVisibleResult"/>
+    </resultMap>
+
+    <resultMap type="SysFormFieldRules" id="SysFormFieldRulesResult">
+        <id property="id" column="id"/>
+        <result property="fieldId" column="field_id"/>
+        <result property="verifyType" column="verify_type"/>
+        <result property="message" column="message"/>
+        <result property="ruleName" column="rule_name"/>
+        <result property="ruleValue" column="rule_value"/>
+        <result property="checkName" column="check_name"/>
+        <result property="regText" column="reg_text"/>
+        <result property="tableName" column="table_name"/>
+        <result property="validateIdName" column="validate_id_name"/>
+        <result property="otherField" column="other_field"/>
+        <result property="max" column="max"/>
+        <result property="min" column="min"/>
+        <result property="sort" column="sort"/>
+    </resultMap>
+
+    <resultMap type="SysFormFieldVisible" id="SysFormFieldVisibleResult">
+        <id property="id" column="id"/>
+        <result property="fieldId" column="field_id"/>
+        <result property="visible" column="visible"/>
+        <result property="visibleValue" column="visible_value"/>
+        <result property="defaultValue" column="default_value"/>
+        <result property="visibleDefaultValue" column="visible_default_value"/>
+        <result property="status" column="status"/>
+    </resultMap>
+    <sql id="selectSysFormFieldVo">
+        select t.field_id,
+               t.form_id,
+               t.type,
+               t.prop,
+               t.label,
+               t.required,
+               t.rules,
+               t.props,
+               t.init_request,
+               t.searchable,
+               t.url,
+               t.method,
+               t.keyword,
+               t.date_type,
+               t.default_css,
+               t.disabled_date_type,
+               t.disabled,
+               t.span,
+               t.disabled_date_days,
+               t.sort,
+               t.multiple,
+               t.update_field,
+               t.filter_params,
+               t.default_value,
+               t.dynamic_label,
+               t.showabled,
+               t.remark,
+               t.file_type,
+               d.dict_value rule_value,
+               sfr.verify_type,
+               sfr.message,
+               sfr.rule_name,
+               sfr.check_name,
+               sfr.reg_text,
+               sfr.table_name,
+               sfr.validate_id_name,
+               sfr.other_field,
+               sfr.max,
+               sfr.min,
+               sfv.visible,
+               sfv.visible_value,
+               sfv.default_value visible_default_value,
+               sfv.status
+        from sys_form_field t
+             left join sys_form_field_rules sfr on sfr.field_id = t.field_id
+             left join sys_dict_data d on d.dict_code = sfr.verify_type
+
+             left join sys_form_field_visible sfv on sfv.field_id = t.field_id
+            order by t.sort
+    </sql>
+
+    <sql id="selectList">
+        select t.*,dt.dict_label typeName,(select count(0) from sys_form_field_rules r where r.field_id = t.field_id ) ruleCount,
+               (select count(0) from sys_form_field_visible v where v.field_id = t.field_id ) visibleCount from sys_form_field t
+          left join sys_dict_data dt on t.type = dt.dict_value and dt.dict_type='table_field_type'
+            order by t.sort
+    </sql>
+
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectList"/>) t
+        ${ew.customSqlSegment}
+    </select>
+
+    <select id="selectFormFieldList" resultMap="SysFormFieldResult">
+        select t.* from (<include refid="selectSysFormFieldVo"/>) t
+        ${ew.customSqlSegment}
+    </select>
+
+
+
+
+    <select id="selectFormFieldByFieldId" resultMap="SysFormFieldResult">
+        select f.* from sys_form_field f
+        where f.form_id = (select form_id from sys_form_field where field_id='${fieldId}')
+          and f.field_id !='${fieldId}'
+
+    </select>
+
+
+</mapper>

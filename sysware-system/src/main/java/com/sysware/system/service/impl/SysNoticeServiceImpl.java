@@ -1,0 +1,108 @@
+package com.sysware.system.service.impl;
+
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.sysware.common.core.domain.PageQuery;
+import com.sysware.common.core.page.TableDataInfo;
+import com.sysware.system.domain.SysNotice;
+import com.sysware.system.mapper.SysNoticeMapper;
+import com.sysware.system.service.ISysNoticeService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 公告 服务层实现
+ *
+ * @author
+ */
+@RequiredArgsConstructor
+@Service
+public class SysNoticeServiceImpl  implements ISysNoticeService {
+
+    private final SysNoticeMapper baseMapper;
+
+    @Override
+    public TableDataInfo<Map> selectPageNoticeList(SysNotice notice, PageQuery pageQuery) {
+        LambdaQueryWrapper<SysNotice> lqw = new LambdaQueryWrapper<SysNotice>()
+                .like(StrUtil.isNotBlank(notice.getNoticeTitle()), SysNotice::getNoticeTitle, notice.getNoticeTitle())
+                .eq(StrUtil.isNotBlank(notice.getNoticeType()), SysNotice::getNoticeType, notice.getNoticeType())
+                .like(StrUtil.isNotBlank(notice.getCreateBy()), SysNotice::getCreateBy, notice.getCreateBy());
+        IPage<Map> mapIPage = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        return TableDataInfo.build(mapIPage);
+    }
+
+    /**
+     * 查询公告信息
+     *
+     * @param noticeId 公告ID
+     * @return 公告信息
+     */
+    @Override
+    public SysNotice selectNoticeById(Long noticeId) {
+        return baseMapper.selectById(noticeId);
+    }
+
+    /**
+     * 查询公告列表
+     *
+     * @param notice 公告信息
+     * @return 公告集合
+     */
+    @Override
+    public List<SysNotice> selectNoticeList(SysNotice notice) {
+        return baseMapper.selectList(new LambdaQueryWrapper<SysNotice>()
+                .like(StrUtil.isNotBlank(notice.getNoticeTitle()),SysNotice::getNoticeTitle,notice.getNoticeTitle())
+                .eq(StrUtil.isNotBlank(notice.getNoticeType()),SysNotice::getNoticeType,notice.getNoticeType())
+                .like(StrUtil.isNotBlank(notice.getCreateBy()),SysNotice::getCreateBy,notice.getCreateBy()));
+    }
+
+    /**
+     * 新增公告
+     *
+     * @param notice 公告信息
+     * @return 结果
+     */
+    @Override
+    public int insertNotice(SysNotice notice) {
+        return baseMapper.insert(notice);
+    }
+
+    /**
+     * 修改公告
+     *
+     * @param notice 公告信息
+     * @return 结果
+     */
+    @Override
+    public int updateNotice(SysNotice notice) {
+        return baseMapper.updateById(notice);
+    }
+
+    /**
+     * 删除公告对象
+     *
+     * @param noticeId 公告ID
+     * @return 结果
+     */
+    @Override
+    public int deleteNoticeById(Long noticeId) {
+        return baseMapper.deleteById(noticeId);
+    }
+
+    /**
+     * 批量删除公告信息
+     *
+     * @param noticeIds 需要删除的公告ID
+     * @return 结果
+     */
+    @Override
+    public int deleteNoticeByIds(Long[] noticeIds) {
+        return baseMapper.deleteBatchIds(Arrays.asList(noticeIds));
+    }
+}

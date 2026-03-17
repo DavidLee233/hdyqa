@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.mainData.mapper.HdlPersonBasicInfoMapper">
+
+    <resultMap type="com.sysware.mainData.domain.HdlPersonBasicInfo" id="HdlPersonBasicInfoResult">
+        <result property="pkPsndoc" column="pk_psndoc"/>
+        <result property="code" column="code"/>
+        <result property="registeredResidence" column="registered_residence"/>
+        <result property="familyAddress" column="family_address"/>
+        <result property="office" column="office"/>
+        <result property="inOutNumber" column="in_out_number"/>
+        <result property="secretLevel" column="secret_level"/>
+        <result property="name" column="name"/>
+        <result property="idType" column="id_type"/>
+        <result property="sex" column="sex"/>
+        <result property="idNumber" column="id_number"/>
+        <result property="birthdate" column="birthdate"/>
+        <result property="nativePlace" column="native_place"/>
+        <result property="nationality" column="nationality"/>
+        <result property="polity" column="polity"/>
+        <result property="pkEdu" column="pk_edu"/>
+        <result property="pkDegree" column="pk_degree"/>
+        <result property="joinWorkDate" column="join_work_date"/>
+        <result property="mobile" column="mobile"/>
+        <result property="officePhone" column="office_phone"/>
+        <result property="postalCode" column="postal_code"/>
+        <result property="pkOrg" column="pk_org"/>
+        <result property="joinPolityDate" column="join_polity_date"/>
+        <result property="professionalLevel" column="professional_level"/>
+        <result property="technicalLevel" column="technical_level"/>
+        <result property="graduationSchool" column="graduation_school"/>
+        <result property="joinCompanyDate" column="join_company_date"/>
+        <result property="professionalQualification" column="professional_qualification"/>
+        <result property="graduationDate" column="graduation_date"/>
+        <result property="enableState" column="enable_state"/>
+        <result property="oldPkPsndoc" column="old_pk_psndoc"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createId" column="create_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateId" column="update_id"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+
+
+    <sql id="selectHdlPersonBasicInfoVo">
+        select
+                t.pk_psndoc, 
+                t.code, 
+                t.registered_residence, 
+                t.family_address, 
+                t.office, 
+                t.in_out_number, 
+                t.secret_level, 
+                t.name, 
+                t.id_type, 
+                t.sex, 
+                t.id_number, 
+                t.birthdate, 
+                t.native_place, 
+                t.nationality, 
+                t.polity, 
+                t.pk_edu, 
+                t.pk_degree, 
+                t.join_work_date, 
+                t.mobile, 
+                t.office_phone, 
+                t.postal_code, 
+                t.pk_org, 
+                t.join_polity_date, 
+                t.professional_level, 
+                t.technical_level, 
+                t.graduation_school, 
+                t.join_company_date, 
+                t.professional_qualification, 
+                t.graduation_date, 
+                t.enable_state, 
+                t.old_pk_psndoc, 
+                t.create_by, 
+                t.create_id, 
+                t.create_time, 
+                t.update_by, 
+                t.update_id, 
+                t.update_time
+         from hdl_person_basic_info t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectHdlPersonBasicInfoVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectPBIList" parameterType="HdlPersonBasicInfo" resultMap="HdlPersonBasicInfoResult">
+        select u.* from (<include refid="selectHdlPersonBasicInfoVo"/>) u
+        <if test="name != null and name != ''">
+            AND u.name like concat('%', #{name}, '%')
+        </if>
+    </select>
+
+
+</mapper>

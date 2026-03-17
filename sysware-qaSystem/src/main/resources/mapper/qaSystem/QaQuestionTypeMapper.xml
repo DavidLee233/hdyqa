@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.qa.mapper.QaQuestionTypeMapper">
+
+    <resultMap type="com.sysware.qa.domain.QaQuestionType" id="QaQuestionTypeResult">
+        <result property="typeId" column="type_id"/>
+        <result property="type" column="type"/>
+        <result property="occupied" column="occupied"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="sequence" column="sequence"/>
+    </resultMap>
+
+
+
+    <sql id="selectQaQuestionTypeVo">
+        select
+            t.type_id,
+            t.type,
+            t.occupied,
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.sequence
+        from qa_question_type t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectQaQuestionTypeVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectAllType" resultMap="QaQuestionTypeResult">
+        select t.type_id,
+               t.type,
+               t.occupied,
+               t.sequence
+        from (<include refid="selectQaQuestionTypeVo"/>) t
+    </select>
+
+    <select id="selectPartType" resultMap="QaQuestionTypeResult">
+        select
+            t.type_id,
+            t.type,
+            t.occupied,
+            t.sequence
+        from (<include refid="selectQaQuestionTypeVo"/>) t
+        where t.occupied = 0
+    </select>
+
+    <select id="selectByType" resultMap="QaQuestionTypeResult">
+        select
+            t.type_id,
+            t.type,
+            t.occupied
+        from (<include refid="selectQaQuestionTypeVo"/>) t
+        where t.type = #{type}
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.mainData.mapper.HdlPersonJobInfoMapper">
+
+    <resultMap type="com.sysware.mainData.domain.HdlPersonJobInfo" id="HdlPersonJobInfoResult">
+        <result property="pkPsnjob" column="pk_psnjob"/>
+        <result property="name" column="name"/>
+        <result property="idNumber" column="id_number"/>
+        <result property="inOutNumber" column="in_out_number"/>
+        <result property="realPkDept" column="real_pk_dept"/>
+        <result property="keyNumber" column="key_number"/>
+        <result property="code" column="code"/>
+        <result property="pkDept" column="pk_dept"/>
+        <result property="pkJob" column="pk_job"/>
+        <result property="beginDate" column="begin_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="pkPsncl" column="pk_psncl"/>
+        <result property="pkPsndoc" column="pk_psndoc"/>
+        <result property="secretLevel" column="secret_level"/>
+        <result property="lastFlag" column="last_flag"/>
+        <result property="endFlag" column="end_flag"/>
+        <result property="pkOrg" column="pk_org"/>
+        <result property="isMainJob" column="is_main_job"/>
+        <result property="oldPkPsnjob" column="old_pk_psnjob"/>
+        <result property="otherJobTitle" column="other_job_title"/>
+        <result property="jobLevel" column="job_level"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createId" column="create_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateId" column="update_id"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+
+
+    <sql id="selectHdlPersonJobInfoVo">
+        select
+                t.pk_psnjob, 
+                t.name, 
+                t.id_number, 
+                t.in_out_number, 
+                t.real_pk_dept, 
+                t.key_number,
+                t.code, 
+                t.pk_dept, 
+                t.pk_job, 
+                t.begin_date, 
+                t.end_date, 
+                t.pk_psncl, 
+                t.pk_psndoc, 
+                t.secret_level, 
+                t.last_flag, 
+                t.end_flag, 
+                t.pk_org, 
+                t.is_main_job, 
+                t.old_pk_psnjob, 
+                t.other_job_title, 
+                t.job_level, 
+                t.create_by, 
+                t.create_id, 
+                t.create_time, 
+                t.update_by, 
+                t.update_id, 
+                t.update_time
+         from hdl_person_job_info t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectHdlPersonJobInfoVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectPJIList" parameterType="HdlPersonJobInfo" resultMap="HdlPersonJobInfoResult">
+        select u.* from (<include refid="selectHdlPersonJobInfoVo"/>) u
+        <if test="name != null and name != ''">
+            AND u.name like concat('%', #{name}, '%')
+        </if>
+    </select>
+
+
+</mapper>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SecurityMapper">
+
+    <resultMap type="com.sysware.common.core.domain.entity.SysSecurity" id="SecurityResult">
+        <result property="securityId" column="security_id"/>
+        <result property="securityName" column="security_name"/>
+        <result property="securityValue" column="security_value"/>
+        <result property="securityType" column="security_type"/>
+        <result property="securityFlag" column="security_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="sort" column="sort"/>
+    </resultMap>
+
+    <sql id="selectSysSecurityVo">
+        select
+            t.security_id,
+            t.security_type,
+            t.security_value,
+            t.security_name,
+            t.security_flag,
+            t.create_time,
+            t.create_by,
+            t.update_time,
+            t.update_by,
+            t.sort
+        from sys_security t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysSecurityVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="selectAllSecurity" resultMap="SecurityResult">
+        select
+            t.security_id,
+            t.security_name,
+            t.sort
+        from sys_security t
+        where t.security_type = #{securityType} and t.security_flag = 1
+    </select>
+
+</mapper>

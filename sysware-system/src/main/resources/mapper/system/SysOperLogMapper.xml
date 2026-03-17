@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysOperLogMapper">
+
+    <resultMap type="SysOperLog" id="SysOperLogResult">
+        <id property="operId" column="oper_id"/>
+        <result property="title" column="title"/>
+        <result property="businessType" column="business_type"/>
+        <result property="method" column="method"/>
+        <result property="requestMethod" column="request_method"/>
+        <result property="operatorType" column="operator_type"/>
+        <result property="operName" column="oper_name"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="operUrl" column="oper_url"/>
+        <result property="operIp" column="oper_ip"/>
+        <result property="operLocation" column="oper_location"/>
+        <result property="operParam" column="oper_param"/>
+        <result property="jsonResult" column="json_result"/>
+        <result property="status" column="status"/>
+        <result property="errorMsg" column="error_msg"/>
+        <result property="operTime" column="oper_time"/>
+        <result property="operUserId" column="oper_user_id"/>
+        <result property="operUserSecurityId" column="oper_user_security_id"/>
+        <result property="operUserSecurityName" column="oper_user_security_name"/>
+        <result property="operUserSecurityValue" column="oper_user_security_value"/>
+        <result property="operObjectId" column="oper_object_id"/>
+        <result property="operObjectName" column="oper_object_name"/>
+        <result property="operObjectSecurityName" column="oper_object_security_name"/>
+        <result property="operObjectSecurityId" column="oper_object_security_id"/>
+        <result property="operObjectSecurityValue" column="oper_object_security_value"/>
+    </resultMap>
+
+    <sql id="selectSysOperLogVo">
+        select
+            t.oper_id,
+            t.title,
+            t.business_type,
+            t.method,
+            t.request_method,
+            t.operator_type,
+            t.oper_name,
+            t.dept_name,
+            t.oper_url,
+            t.oper_ip,
+            t.oper_location,
+            t.oper_param,
+            t.json_result,
+            t.status,
+            t.error_msg,
+            t.oper_time,
+            t.oper_user_id,
+            t.oper_user_security_id,
+            t.oper_user_security_name,
+            t.oper_object_security_name,
+            t.oper_object_security_id,
+            t.oper_object_id,
+            t.oper_object_name,
+            t.oper_user_security_value,
+            t.oper_object_security_value
+        from sys_oper_log t
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysOperLogVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+    <select id="getTableColumn" resultType="java.util.Map">
+        select column_name prop,column_comment label from gen_table_column where table_id = (select table_id from gen_table where table_name= #{tableName})
+    </select>
+
+    <select id="getOperDataInfo" resultType="java.util.Map">
+        select oper_pre_param oldData,oper_after_param newData,oper_id
+        from sys_oper_params where  oper_id=#{operId}
+    </select>
+
+    <select id="selectOperLogList" parameterType="SysOperLogBo" resultMap="SysOperLogResult">
+        <include refid="selectSysOperLogVo"/>
+        <where>
+            <if test="operId != null  and operId != ''"> and oper_id = #{operId}</if>
+            <if test="title != null  and title != ''"> and title = #{title}</if>
+            <if test="businessType != null  and businessType != ''"> and business_type = #{businessType}</if>
+            <if test="method != null  and method != ''"> and method = #{method}</if>
+            <if test="requestMethod != null  and requestMethod != ''"> and request_method = #{requestMethod}</if>
+            <if test="operatorType != null  and operatorType != ''"> and operator_type = #{operatorType}</if>
+            <if test="operName != null  and operName != ''"> and oper_name = #{operName}</if>
+            <if test="deptName != null  and deptName != ''"> and dept_name = #{deptName}</if>
+            <if test="operUrl != null  and operUrl != ''"> and oper_url = #{operUrl}</if>
+            <if test="operIp != null  and operIp != ''"> and oper_ip = #{operIp}</if>
+            <if test="operLocation != null  and operLocation != ''"> and oper_location = #{operLocation}</if>
+            <if test="operParam != null  and operParam != ''"> and oper_param = #{operParam}</if>
+            <if test="jsonResult != null  and jsonResult != ''"> and json_result = #{jsonResult}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="errorMsg != null  and errorMsg != ''"> and error_msg = #{errorMsg}</if>
+            <if test="operUserId != null  and operUserId != ''"> and oper_user_id = #{operUserId}</if>
+            <if test="operUserSecurityId != null  and operUserSecurityId != ''"> and oper_user_security_id = #{operUserSecurityId}</if>
+            <if test="operUserSecurityName != null  and operUserSecurityName != ''"> and oper_user_security_name = #{operUserSecurityName}</if>
+            <if test="operObjectSecurityName != null  and operObjectSecurityName != ''"> and oper_object_security_name = #{operObjectSecurityName}</if>
+            <if test="operObjectSecurityId != null  and operObjectSecurityId != ''"> and oper_object_security_id = #{operObjectSecurityId}</if>
+            <if test="operObjectId != null  and operObjectId != ''"> and oper_object_id = #{operObjectId}</if>
+            <if test="operObjectName != null  and operObjectName != ''"> and oper_object_name = #{operObjectName}</if>
+            <if test="operUserSecurityValue != null  and operUserSecurityValue != ''"> and oper_user_security_value = #{operUserSecurityValue}</if>
+            <if test="operObjectSecurityValue != null  and operObjectSecurityValue != ''"> and oper_object_security_value = #{operObjectSecurityValue}</if>
+
+            <!-- 使用 create_time 进行时间范围查询 -->
+            <if test="beginTime != null and beginTime != '' and endTime != null and endTime != ''">
+                and oper_time between
+                str_to_date(concat(#{beginTime}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+                and
+                str_to_date(concat(#{endTime}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+            </if>
+            <!-- 如果只传了开始时间 -->
+            <if test="beginTime != null and beginTime != '' and (endTime == null or endTime == '')">
+                and oper_time >= str_to_date(concat(#{beginTime}, ' 00:00:00'), '%Y-%m-%d %H:%i:%s')
+            </if>
+            <!-- 如果只传了结束时间 -->
+            <if test="endTime != null and endTime != '' and (beginTime == null or beginTime == '')">
+                and oper_time &lt;= str_to_date(concat(#{endTime}, ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+            </if>
+        </where>
+        order by oper_time
+    </select>
+
+</mapper> 

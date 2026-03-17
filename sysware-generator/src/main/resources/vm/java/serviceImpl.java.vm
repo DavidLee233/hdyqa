@@ -1,0 +1,112 @@
+package ${packageName}.service.impl;
+
+import cn.hutool.core.bean.BeanUtil;
+import com.sysware.common.utils.StringUtils;
+#if($table.crud || $table.sub)
+import com.sysware.common.core.page.TableDataInfo;
+import com.sysware.common.core.domain.PageQuery;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+#end
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import com.sysware.system.service.ISysTableFieldService;
+import ${packageName}.domain.bo.${ClassName}Bo;
+import ${packageName}.domain.vo.${ClassName}Vo;
+import ${packageName}.domain.${ClassName};
+import ${packageName}.mapper.${ClassName}Mapper;
+import ${packageName}.service.I${ClassName}Service;
+import com.sysware.common.helper.LoginHelper;
+import com.sysware.common.utils.SyswareUtil;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Collection;
+import java.util.*;
+
+/**
+ * ${functionName}Service业务层处理
+ *
+ * @author ${author}
+ * @date ${datetime}
+ */
+@RequiredArgsConstructor
+@Service
+public class ${ClassName}ServiceImpl implements I${ClassName}Service {
+
+    private final ${ClassName}Mapper baseMapper;
+    private final ISysTableFieldService tableFieldService;
+
+    /**
+     * 查询${functionName}
+     */
+    @Override
+    public ${ClassName}Vo queryById(${pkColumn.javaType} ${pkColumn.javaField}){
+        return baseMapper.selectVoById(${pkColumn.javaField});
+    }
+
+#if($table.crud || $table.sub)
+    /**
+     * 查询${functionName}列表
+     */
+    @Override
+    public TableDataInfo queryPageList(${ClassName}Bo bo, PageQuery pageQuery) {
+
+        return TableDataInfo.build(tableFieldService.getResult(BeanUtil.beanToMap(bo), pageQuery, baseMapper,SyswareUtil.getSearchFieldMap(bo.getSearchField())));
+
+    }
+#end
+
+
+    /**
+     * 新增${functionName}
+     */
+    @Override
+    public Boolean insertByBo(${ClassName}Bo bo) {
+        ${ClassName} add = BeanUtil.toBean(bo, ${ClassName}.class);
+        add.setCreateTime(LocalDateTime.now());
+        add.setCreateBy(LoginHelper.getUserId());
+        add.setUpdateBy(LoginHelper.getUserId());
+        add.setUpdateTime(LocalDateTime.now());
+        validEntityBeforeSave(add);
+        boolean flag = baseMapper.insert(add) > 0;
+#set($pk=$pkColumn.javaField.substring(0,1).toUpperCase() + ${pkColumn.javaField.substring(1)})
+        if (flag) {
+            bo.set$pk(add.get$pk());
+        }
+        return flag;
+    }
+
+    /**
+     * 修改${functionName}
+     */
+    @Override
+    public Boolean updateByBo(${ClassName}Bo bo) {
+        ${ClassName} update = BeanUtil.toBean(bo, ${ClassName}.class);
+        update.setUpdateBy(LoginHelper.getUserId());
+        update.setUpdateTime(LocalDateTime.now());
+        validEntityBeforeSave(update);
+        return baseMapper.updateById(update) > 0;
+    }
+
+    /**
+     * 保存前的数据校验
+     */
+    private void validEntityBeforeSave(${ClassName} entity){
+        //TODO 做一些数据校验,如唯一约束
+    }
+
+    /**
+     * 批量删除${functionName}
+     */
+    @Override
+    public Boolean deleteWithValidByIds(Collection<${pkColumn.javaType}> ids, Boolean isValid) {
+        if(isValid){
+            //TODO 做一些业务上的校验,判断是否需要校验
+        }
+        return baseMapper.deleteBatchIds(ids) > 0;
+    }
+}

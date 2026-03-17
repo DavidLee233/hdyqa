@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.DocFieldMapper">
+
+    <resultMap type="com.sysware.system.domain.DocField" id="DocFieldResult">
+        <result property="id" column="id"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="docName" column="doc_name"/>
+        <result property="docId" column="doc_id"/>
+        <result property="code" column="code"/>
+        <result property="type" column="type"/>
+        <result property="label" column="label"/>
+        <result property="length" column="length"/>
+        <result property="required" column="required"/>
+        <result property="addShow" column="add_show"/>
+        <result property="archiveShow" column="archive_show"/>
+        <result property="detailsShow" column="details_show"/>
+        <result property="sort" column="sort"/>
+    </resultMap>
+
+
+
+    <sql id="selectDocFieldVo">
+        select
+            t.id,
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.doc_name,
+            t.doc_id,
+            t.code,
+            t.type,
+            t.label,
+            t.length,
+            t.required,
+            t.add_show,
+            t.archive_show,
+            t.details_show,
+            t.sort
+        from hdy_doc_field t
+
+    </sql>
+
+ <!--   <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectDocFieldVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+-->
+
+    <select id="selectImportFieldList" resultType="java.util.Map">
+        select t.*
+        from (select t.prop code,
+                     t.sort,
+                     t.label,
+                     t.type
+              from sys_form_field t
+              where t.form_id = '/project/document/add'
+                and t.prop not in (select prop from sys_form_field where form_id = #{docId})
+             ) t ${ew.customSqlSegment}
+
+    </select>
+
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysFormFieldRulesMapper">
+
+    <resultMap type="com.sysware.system.domain.SysFormFieldRules" id="SysFormFieldRulesResult">
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="id" column="id"/>
+        <result property="fieldId" column="field_id"/>
+        <result property="verifyType" column="verify_type"/>
+        <result property="verifyTypeLabel" column="verify_type_Label"/>
+        <result property="message" column="message"/>
+        <result property="ruleName" column="rule_name"/>
+        <result property="checkName" column="check_name"/>
+        <result property="regText" column="reg_text"/>
+        <result property="tableName" column="table_name"/>
+        <result property="validateIdName" column="validate_id_name"/>
+        <result property="max" column="max"/>
+        <result property="min" column="min"/>
+        <result property="sort" column="sort"/>
+        <result property="remark" column="remark"/>
+        <result property="otherField" column="other_field"/>
+    </resultMap>
+
+    <sql id="selectSysFormFieldRulesVo">
+        select
+            t.create_by,
+            t.create_time,
+            t.update_by,
+            t.update_time,
+            t.id,
+            t.field_id,
+            t.verify_type,
+            t.message,
+            t.verify_type_Label,
+            t.check_name,
+            t.reg_text,
+            t.table_name,
+            t.validate_id_name,
+            t.max,
+            t.min,
+            t.sort,
+            t.remark,
+            t.other_field,
+            f.label current_label
+        from sys_form_field_rules t
+         left join sys_form_field f on f.field_id = t.field_id
+
+    </sql>
+
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysFormFieldRulesVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+</mapper>

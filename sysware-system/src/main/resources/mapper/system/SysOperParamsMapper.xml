@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sysware.system.mapper.SysOperParamsMapper">
+
+    <resultMap type="com.sysware.system.domain.SysOperParams" id="SysOperParamsResult">
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="operId" column="oper_id"/>
+        <result property="operPreParam" column="oper_pre_param"/>
+        <result property="operAfterParam" column="oper_after_param"/>
+        <result property="operTableName" column="oper_table_name"/>
+    </resultMap>
+
+
+
+    <sql id="selectSysOperParamsVo">
+        select
+                t.create_by,
+                t.create_time,
+                t.update_by,
+                t.update_time,
+                t.oper_id,
+                t.oper_pre_param,
+                t.oper_after_param,
+                t.oper_table_name
+         from sys_oper_params t
+
+    </sql>
+
+    <select id="selectMapsPage" resultType="java.util.Map">
+        select t.* from (<include refid="selectSysOperParamsVo"/>) t
+
+        ${ew.customSqlSegment}
+
+    </select>
+
+
+</mapper>
