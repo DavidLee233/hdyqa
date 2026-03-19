@@ -348,8 +348,8 @@ export default {
     /** 加载字段映射配置 */
     async loadFieldMapping() {
       try {
-        // 假设字段类型为1表示组织部门映射
-        const response = await getFieldMappingByType({ type: '1' });  // 查询员工基本信息字段映射列表
+        // 员工基本信息映射类型：2（兼容后端旧值1）
+        const response = await getFieldMappingByType({ type: '2' });  // 查询员工基本信息字段映射列表
         if (response.code === 200) {
           this.fieldMapping = response.data || [];
         }
@@ -604,7 +604,7 @@ export default {
         // 如果是远程数据，需要转换查询参数
         if (this.dataSource === 'remote') {
           queryParams = this.convertToRemoteQuery(this.queryParams);
-          exportUrl = '/mainData/personBasicInfo/exportRemote';
+          exportUrl = '/mainData/personBasicInfo/remote/export';
         }
         const filename = `员工基本信息数据_${this.dataSource === 'local' ? '本地' : '远程'}_${new Date().getTime()}.xlsx`;
         this.download(exportUrl, queryParams, filename)

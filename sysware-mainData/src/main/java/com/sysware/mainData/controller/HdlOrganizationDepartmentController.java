@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.io.OutputStream;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.sysware.common.core.domain.entity.SysUser;
@@ -165,6 +166,33 @@ public class HdlOrganizationDepartmentController extends BaseController {
         } catch (Exception e) {
             // 返回空数据而不是抛出异常
             return RemoteTableDataInfo.build(null, 0L, new PageQuery());
+        }
+    }
+
+    /**
+     * 导出远端组织部门数据
+     * 兼容两种前端路径：
+     * - /mainData/organizationDepartment/remote/export
+     * - /mainData/organizationDepartment/exportRemote
+     */
+    @PostMapping({"/remote/export", "/exportRemote"})
+    public void exportRemote(@RequestParam Map<String, Object> params, HttpServletResponse response) {
+        try {
+            Map<String, Object> queryParams = new HashMap<>(params);
+            queryParams.put("pageNum", 0);
+            queryParams.put("pageSize", 10000);
+
+            byte[] data = remoteDataService.exportRemoteDepartments(queryParams);
+            response.setContentType("application/vnd.ms-excel");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-disposition",
+                "attachment;filename=remote_organization_department_" + System.currentTimeMillis() + ".xlsx");
+            try (OutputStream os = response.getOutputStream()) {
+                os.write(data == null ? new byte[0] : data);
+                os.flush();
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
 }

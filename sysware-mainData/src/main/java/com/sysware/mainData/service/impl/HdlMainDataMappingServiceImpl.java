@@ -56,6 +56,9 @@ public class HdlMainDataMappingServiceImpl implements IHdlMainDataMappingService
      */
     @Override
     public TableDataInfo queryPageList(HdlMainDataMappingBo bo, PageQuery pageQuery) {
+        if (bo != null && StringUtils.isNotBlank(bo.getType())) {
+            bo.setType(resolveStorageType(bo.getType()));
+        }
         // 使用传入的pageQuery构建分页参数
         Page<HdlMainDataMapping> page = new Page<>(pageQuery.getPageNum(), pageQuery.getPageSize());
         // 执行分页查询
@@ -122,6 +125,40 @@ public class HdlMainDataMappingServiceImpl implements IHdlMainDataMappingService
      */
     @Override
     public List<HdlMainDataMappingVo> selectMainDataMappingByType(String type) {
-        return baseMapper.selectMainDataMappingByType(type);
+        return baseMapper.selectMainDataMappingByType(resolveStorageType(type));
+    }
+
+    /**
+     * 自动兼容字段类型编码：
+     * - 新编码：1/2/3
+     * - 旧编码：0/1/2
+     *
+     * 规则：当库中存在 type=0 且不存在 type=3 时，认为使用旧编码。
+     */
+    private String resolveStorageType(String requestedType) {
+        if (StringUtils.isBlank(requestedType)) {
+            return requestedType;
+        }
+        if (!isLegacyTypeSchema()) {
+            return requestedType;
+        }
+        if ("1".equals(requestedType)) {
+            return "0";
+        }
+        if ("2".equals(requestedType)) {
+            return "1";
+        }
+        if ("3".equals(requestedType)) {
+            return "2";
+        }
+        return requestedType;
+    }
+
+    private boolean isLegacyTypeSchema() {
+        Long type0Count = baseMapper.selectCount(
+            Wrappers.<HdlMainDataMapping>lambdaQuery().eq(HdlMainDataMapping::getType, "0"));
+        Long type3Count = baseMapper.selectCount(
+            Wrappers.<HdlMainDataMapping>lambdaQuery().eq(HdlMainDataMapping::getType, "3"));
+        return type0Count != null && type0Count > 0 && (type3Count == null || type3Count == 0);
     }
 }

@@ -3,15 +3,20 @@ package com.sysware.mainData.controller;
 import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
+import java.util.Map;
+import java.io.OutputStream;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.sysware.mainData.domain.HdlOrganizationDepartment;
 import com.sysware.mainData.domain.HdlPersonBasicInfo;
 import com.sysware.mainData.domain.vo.HdlOrganizationDepartmentVo;
+import com.sysware.mainData.service.IRemoteDataService;
 import lombok.RequiredArgsConstructor;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.*;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 import com.sysware.common.annotation.RepeatSubmit;
@@ -27,6 +32,7 @@ import com.sysware.common.utils.poi.ExcelUtil;
 import com.sysware.mainData.domain.vo.HdlPersonBasicInfoVo;
 import com.sysware.mainData.domain.bo.HdlPersonBasicInfoBo;
 import com.sysware.mainData.service.IHdlPersonBasicInfoService;
+import com.sysware.common.core.page.RemoteTableDataInfo;
 import com.sysware.common.core.page.TableDataInfo;
 
 /**
@@ -42,6 +48,8 @@ import com.sysware.common.core.page.TableDataInfo;
 public class HdlPersonBasicInfoController extends BaseController {
 
     private final IHdlPersonBasicInfoService iHdlPersonBasicInfoService;
+    @Autowired
+    private IRemoteDataService remoteDataService;
 
     /**
      * 查询员工基本信息数据列表
@@ -103,5 +111,65 @@ public class HdlPersonBasicInfoController extends BaseController {
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable String[] pkPsndocs) {
         return toAjax(iHdlPersonBasicInfoService.deleteWithValidByIds(Arrays.asList(pkPsndocs), true));
+    }
+
+    /**
+     * 查询远端员工基本信息列表
+     */
+    @PostMapping("/remote/list")
+    public RemoteTableDataInfo listRemote(@RequestBody Map<String, Object> params) {
+        try {
+            PageQuery pageQuery = new PageQuery();
+            int pageNum = params.get("pageNum") != null
+                ? Integer.parseInt(params.get("pageNum").toString()) : 1;
+            int pageSize = params.get("pageSize") != null
+                ? Integer.parseInt(params.get("pageSize").toString()) : 10;
+            pageQuery.setPageNum(pageNum);
+            pageQuery.setPageSize(pageSize);
+
+            Map<String, Object> queryParams = new HashMap<>();
+            if (params.get("name") != null) queryParams.put("name", params.get("name"));
+            if (params.get("code") != null) queryParams.put("code", params.get("code"));
+            if (params.get("mobile") != null) queryParams.put("mobile", params.get("mobile"));
+            if (params.get("searchValue") != null && !params.get("searchValue").toString().isEmpty()) {
+                queryParams.put("searchValue", params.get("searchValue"));
+            }
+            queryParams.put("pageNum", pageNum - 1);
+            queryParams.put("pageSize", pageSize);
+
+            Map<String, Object> result = remoteDataService.queryRemotePersonBasicInfos(queryParams);
+            List<?> rows = (List<?>) result.get("rows");
+            long total = result.get("total") != null
+                ? Long.parseLong(result.get("total").toString()) : 0L;
+            return RemoteTableDataInfo.build(rows, total, pageQuery);
+        } catch (Exception e) {
+            return RemoteTableDataInfo.build(null, 0L, new PageQuery());
+        }
+    }
+
+    /**
+     * 导出远端员工基本信息
+     * 兼容两种前端路径：
+     * - /mainData/personBasicInfo/remote/export
+     * - /mainData/personBasicInfo/exportRemote
+     */
+    @PostMapping({"/remote/export", "/exportRemote"})
+    public void exportRemote(@RequestParam Map<String, Object> params, HttpServletResponse response) {
+        try {
+            Map<String, Object> queryParams = new HashMap<>(params);
+            queryParams.put("pageNum", 0);
+            queryParams.put("pageSize", 10000);
+            byte[] data = remoteDataService.exportRemotePersonBasicInfos(queryParams);
+            response.setContentType("application/vnd.ms-excel");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-disposition",
+                "attachment;filename=remote_person_basic_" + System.currentTimeMillis() + ".xlsx");
+            try (OutputStream os = response.getOutputStream()) {
+                os.write(data == null ? new byte[0] : data);
+                os.flush();
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
     }
 }
