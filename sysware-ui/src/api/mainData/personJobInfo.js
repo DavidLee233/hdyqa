@@ -42,3 +42,22 @@ export function delPersonJobInfo(pkPsnjob) {
     method: 'delete'
   })
 }
+
+// 查询远程员工基本信息列表
+export function listRemotePersonJobInfo(query) {
+  return request({
+    url: '/mainData/personJobInfo/remote/list',
+    method: 'post', // 改为POST方法
+    data: query // 改为data传递
+  })
+}
+
+// 导出远程员工基本信息
+export function exportRemotePersonJobInfo(query) {
+  return request({
+    url: '/mainData/personJobInfo/remote/export',
+    method: 'post', // 改为POST方法
+    data: query, // 改为data传递
+    responseType: 'blob'
+  })
+}

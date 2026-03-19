@@ -32,35 +32,65 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button
-          type="primary"
-          plain
-          icon="el-icon-plus"
-          size="mini"
-          @click="handleAdd"
-        >新增</el-button>
+      <!-- 数据源切换按钮组 -->
+      <el-col :span="2.5">
+        <div class="data-source-switch">
+          <el-button-group>
+            <el-button
+              :type="dataSource === 'local' ? 'primary' : 'default'"
+              size="mini"
+              @click="switchDataSource('local')"
+              :title="dataSource === 'local' ? '当前查看本地数据' : '切换到本地数据'">
+              <i class="el-icon-s-home"></i>
+              本地数据
+            </el-button>
+            <el-button
+              :type="dataSource === 'remote' ? 'primary' : 'default'"
+              size="mini"
+              @click="switchDataSource('remote')"
+              :title="dataSource === 'remote' ? '当前查看院主数据' : '切换到院主数据'">
+              <i class="el-icon-cloudy"></i>
+              院主数据
+            </el-button>
+          </el-button-group>
+          <div class="data-source-indicator">
+            <span class="indicator-dot" :class="{ active: dataSource === 'local' }"></span>
+            <span class="indicator-dot" :class="{ active: dataSource === 'remote' }"></span>
+          </div>
+        </div>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="el-icon-edit"
-          size="mini"
-          :disabled="single"
-          @click="handleUpdate"
-        >修改</el-button>
-      </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="multiple"
-          @click="handleDelete"
-        >删除</el-button>
-      </el-col>
+      <!-- 只有本地数据时显示操作按钮 -->
+      <template v-if="dataSource === 'local'">
+        <el-col :span="1.5">
+          <el-button
+            type="primary"
+            plain
+            icon="el-icon-plus"
+            size="mini"
+            @click="handleAdd"
+          >新增</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button
+            type="success"
+            plain
+            icon="el-icon-edit"
+            size="mini"
+            :disabled="single"
+            @click="handleUpdate"
+          >修改</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button
+            type="danger"
+            plain
+            icon="el-icon-delete"
+            size="mini"
+            :disabled="multiple"
+            @click="handleDelete"
+          >删除</el-button>
+        </el-col>
+      </template>
       <el-col :span="1.5">
         <el-button
           type="warning"
@@ -73,6 +103,17 @@
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" :searchValue.sync="queryParams.searchValue" @queryTable="getList"></right-toolbar>
     </el-row>
+
+    <!-- 远程数据提示 -->
+    <div v-if="dataSource === 'remote'" class="remote-tip">
+      <el-alert
+        title="院主数据（只读模式）"
+        type="info"
+        :closable="false"
+        show-icon>
+        <span>当前查看的是院主数据，数据来源于远程数据库(139.10.2.90)，此处为只读模式。</span>
+      </el-alert>
+    </div>
 
     <el-table v-loading="loading" :data="personJobInfoList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
@@ -87,7 +128,7 @@
       <el-table-column label="人员类别" align="center" prop="pkPsncl" />
       <el-table-column label="涉密级别" align="center" prop="secretLevel" />
       <el-table-column label="是否主职" align="center" prop="isMainJob" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+      <el-table-column v-if="dataSource === 'local'" label="操作" align="center" class-name="small-padding fixed-width" width="180">
         <template slot-scope="scope">
           <el-button
             size="mini"
@@ -101,6 +142,13 @@
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
           >删除</el-button>
+        </template>
+      </el-table-column>
+
+      <!-- 远程数据时显示数据源标识 -->
+      <el-table-column v-if="dataSource === 'remote'" label="数据来源" align="center" width="100">
+        <template>
+          <el-tag size="mini" type="info">远程</el-tag>
         </template>
       </el-table-column>
     </el-table>
@@ -172,8 +220,17 @@
 </template>
 
 <script>
-import { listPersonJobInfo, getPersonJobInfo, delPersonJobInfo, addPersonJobInfo, updatePersonJobInfo } from "@/api/mainData/personJobInfo";
+import {
+  listPersonJobInfo,
+  getPersonJobInfo,
+  delPersonJobInfo,
+  addPersonJobInfo,
+  updatePersonJobInfo,
+  listRemotePersonJobInfo
+} from "@/api/mainData/personJobInfo";
 import {getUser} from "@/api/qaSystem/qaCommon";
+import {getFieldMappingByType} from "@/api/mainData/mainDataMapping";
+import {listOrganizationDepartment, listRemoteOrganizationDepartment} from "@/api/mainData/organizationDepartment";
 
 export default {
   name: "PersonJobInfo",
@@ -262,22 +319,72 @@ export default {
           { required: true, message: '人员类别不能为空', trigger: 'blur' }
         ],
       },
+
+      // 数据源类型：local-本地，remote-远程
+      dataSource: 'local',
+      // 字段映射配置
+      fieldMapping: [],
     };
   },
 
   created() {
     this.getCurrentUser();
     this.getList();
+    this.loadFieldMapping();
   },
 
   methods: {
     /**                      初始化方法                     */
+    /** 加载字段映射配置 */
+    async loadFieldMapping() {
+      try {
+        // 假设字段类型为1表示组织部门映射
+        const response = await getFieldMappingByType({ type: '2' });  // 查询字段映射列表
+        if (response.code === 200) {
+          this.fieldMapping = response.data || [];
+        }
+      } catch (error) {
+        console.error("加载字段映射失败", error);
+        this.fieldMapping = [];
+      }
+    },
+
+    /** 将查询参数转换为远程格式 */
+    convertToRemoteQuery(query) {
+      // 新接口中，后端会处理字段映射，前端只需要传递原始参数
+      const remoteQuery = {
+        pageNum: query.pageNum - 1, // 远程接口从0开始
+        pageSize: query.pageSize,
+      };
+
+      // 添加查询条件
+      if (query.name) remoteQuery.name = query.name;
+      if (query.code) remoteQuery.code = query.code;
+      if (query.keyNumber) remoteQuery.keyNumber = query.keyNumber;
+      return remoteQuery;
+    },
+
     /** 查询参数列表 */
     getList() {
       this.loading = true;
-      listPersonJobInfo(this.queryParams).then(response => {
-        this.personJobInfoList = response.rows;
-        this.total = response.total;
+      let apiParams = { ...this.queryParams };
+
+      // 如果是远程数据，需要转换查询参数
+      if (this.dataSource === 'remote') {
+        apiParams = this.convertToRemoteQuery(this.queryParams);
+      }
+
+      // 根据数据源选择API
+      const apiPromise = this.dataSource === 'local' ?
+        listPersonJobInfo(apiParams) :
+        listRemotePersonJobInfo(apiParams);
+
+      apiPromise.then(response => {
+        let data = response.rows || [];
+        let total = response.total || 0;
+
+        this.personJobInfoList = data;
+        this.total = total;
         this.loading = false;
       }).catch(error =>{
         console.error("获取数据失败", error);
@@ -303,6 +410,26 @@ export default {
     },
 
     /**                      按钮方法                     */
+    /** 切换数据源 */
+    switchDataSource(source) {
+      if (this.dataSource === source) {
+        // 已经是当前数据源，不执行切换
+        return;
+      }
+      this.dataSource = source;
+      // 根据切换方向显示不同的提示
+      if (source === 'local') {
+        this.$message.success('已切换到本地数据（可编辑模式）');
+      } else {
+        this.$message.info('已切换到院主数据（只读模式）');
+      }
+      // 清空选择
+      this.ids = [];
+      this.single = true;
+      this.multiple = true;
+      // 重置查询并重新加载数据
+      this.resetQuery();
+    },
     /**   表单重置   */
     reset() {
       this.form = {
@@ -370,6 +497,11 @@ export default {
 
     /** 新增按钮操作 */
     handleAdd() {
+      // 远程数据不允许新增
+      if (this.dataSource === 'remote') {
+        this.$message.warning('院主数据为只读模式，无法新增数据');
+        return;
+      }
       this.reset();
       this.form.createBy = this.userName;
       this.form.createId = this.loginName;
@@ -379,6 +511,11 @@ export default {
 
     /** 修改按钮操作 */
     handleUpdate(row) {
+      // 远程数据不允许修改
+      if (this.dataSource === 'remote') {
+        this.$message.warning('院主数据为只读模式，无法修改数据');
+        return;
+      }
       this.reset();
       const pkPsnId = row.pkPsnjob || this.ids
       getPersonJobInfo(pkPsnId).then(response => {
@@ -418,6 +555,11 @@ export default {
 
     /** 删除按钮操作 */
     handleDelete(row) {
+      // 远程数据不允许删除
+      if (this.dataSource === 'remote') {
+        this.$message.warning('院主数据为只读模式，无法删除数据');
+        return;
+      }
       const pkPsnId = row.pkPsnjob || this.ids;
       this.$modal.confirm('是否确认删除编号为"' + pkPsnId + '"的数据项？').then(function() {
         return delPersonJobInfo(pkPsnId);
@@ -429,15 +571,27 @@ export default {
 
     /** 导出按钮操作 */
     handleExport() {
-      this.$confirm('是否确认导出所有数据项?', "警告", {
+      const confirmMessage = this.dataSource === 'local'
+        ? '是否确认导出本地数据？'
+        : '是否确认导出院主数据？';
+      this.$confirm(confirmMessage, "警告", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning"
       }).then(() => {
         this.exportLoading = true;
-        this.download('/mainData/personJobInfo/export', {
-          ...this.queryParams
-        }, `员工工作信息数据表_${new Date().getTime()}.xlsx`)
+        let queryParams = { ...this.queryParams };
+        let exportUrl = '/mainData/personJobInfo/export';
+        // 如果是远程数据，需要转换查询参数
+        if (this.dataSource === 'remote') {
+          queryParams = this.convertToRemoteQuery(this.queryParams);
+          exportUrl = '/mainData/personJobInfo/exportRemote';
+        }
+        const filename = `员工工作信息数据_${this.dataSource === 'local' ? '本地' : '远程'}_${new Date().getTime()}.xlsx`;
+        this.download(exportUrl, queryParams, filename)
+          .finally(() => {
+            this.exportLoading = false;
+          });
       }).catch(() => {
         this.exportLoading = false;
       });

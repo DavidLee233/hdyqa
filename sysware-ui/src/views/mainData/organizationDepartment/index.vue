@@ -121,20 +121,6 @@
       <right-toolbar :showSearch.sync="showSearch" :searchValue.sync="queryParams.searchValue" @queryTable="getList"></right-toolbar>
     </el-row>
 
-<!--    &lt;!&ndash; 数据源状态显示 &ndash;&gt;-->
-<!--    <div class="data-source-status">-->
-<!--      <el-tag-->
-<!--        :type="dataSource === 'local' ? 'success' : 'info'"-->
-<!--        size="medium"-->
-<!--        effect="light">-->
-<!--        <i :class="dataSource === 'local' ? 'el-icon-s-home' : 'el-icon-cloudy'"></i>-->
-<!--        {{ dataSource === 'local' ? '本地数据' : '院主数据' }}-->
-<!--        <span class="mode-indicator">-->
-<!--          {{ dataSource === 'local' ? '(可编辑)' : '(只读)' }}-->
-<!--        </span>-->
-<!--      </el-tag>-->
-<!--    </div>-->
-
     <!-- 远程数据提示 -->
     <div v-if="dataSource === 'remote'" class="remote-tip">
       <el-alert

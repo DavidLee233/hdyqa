@@ -42,3 +42,22 @@ export function delPersonBasicInfo(pkPsndoc) {
     method: 'delete'
   })
 }
+
+// 查询远程员工基本信息列表
+export function listRemotePersonBasicInfo(query) {
+  return request({
+    url: '/mainData/personBasicInfo/remote/list',
+    method: 'post', // 改为POST方法
+    data: query // 改为data传递
+  })
+}
+
+// 导出远程员工基本信息
+export function exportRemotePersonBasicInfo(query) {
+  return request({
+    url: '/mainData/personBasicInfo/remote/export',
+    method: 'post', // 改为POST方法
+    data: query, // 改为data传递
+    responseType: 'blob'
+  })
+}
