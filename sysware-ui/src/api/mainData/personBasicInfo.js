@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 查询员工基本信息数据列表
+// 查询员工基本信息列表
 export function listPersonBasicInfo(query) {
   return request({
     url: '/mainData/personBasicInfo/list',
@@ -9,7 +9,7 @@ export function listPersonBasicInfo(query) {
   })
 }
 
-// 查询员工基本信息数据详细
+// 查询员工基本信息详情
 export function getPersonBasicInfo(pkPsndoc) {
   return request({
     url: '/mainData/personBasicInfo/' + pkPsndoc,
@@ -17,7 +17,7 @@ export function getPersonBasicInfo(pkPsndoc) {
   })
 }
 
-// 新增员工基本信息数据
+// 新增员工基本信息
 export function addPersonBasicInfo(data) {
   return request({
     url: '/mainData/personBasicInfo',
@@ -26,7 +26,7 @@ export function addPersonBasicInfo(data) {
   })
 }
 
-// 修改员工基本信息数据
+// 修改员工基本信息
 export function updatePersonBasicInfo(data) {
   return request({
     url: '/mainData/personBasicInfo',
@@ -35,7 +35,7 @@ export function updatePersonBasicInfo(data) {
   })
 }
 
-// 删除员工基本信息数据
+// 删除员工基本信息
 export function delPersonBasicInfo(pkPsndoc) {
   return request({
     url: '/mainData/personBasicInfo/' + pkPsndoc,
@@ -43,21 +43,29 @@ export function delPersonBasicInfo(pkPsndoc) {
   })
 }
 
-// 查询远程员工基本信息列表
+// 查询远端员工基本信息列表
 export function listRemotePersonBasicInfo(query) {
   return request({
     url: '/mainData/personBasicInfo/remote/list',
-    method: 'post', // 改为POST方法
-    data: query // 改为data传递
+    method: 'post',
+    data: query
   })
 }
 
-// 导出远程员工基本信息
+// 导出远端员工基本信息
 export function exportRemotePersonBasicInfo(query) {
   return request({
     url: '/mainData/personBasicInfo/remote/export',
-    method: 'post', // 改为POST方法
-    data: query, // 改为data传递
+    method: 'post',
+    data: query,
     responseType: 'blob'
+  })
+}
+
+// 强制同步远端员工基本信息到本地
+export function forceSyncRemotePersonBasicInfo() {
+  return request({
+    url: '/mainData/personBasicInfo/remote/forceSync',
+    method: 'post'
   })
 }

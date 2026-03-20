@@ -47,4 +47,22 @@ public interface IRemoteDataService {
      * @return 导出文件字节数组
      */
     byte[] exportRemotePersonJobInfos(Map<String, Object> params);
+
+    /**
+     * 强制同步远程组织部门到本地
+     * @return 同步统计结果
+     */
+    Map<String, Object> forceSyncDepartments();
+
+    /**
+     * 强制同步远程员工基本信息到本地
+     * @return 同步统计结果
+     */
+    Map<String, Object> forceSyncPersonBasicInfos();
+
+    /**
+     * 强制同步远程员工工作信息到本地
+     * @return 同步统计结果
+     */
+    Map<String, Object> forceSyncPersonJobInfos();
 }

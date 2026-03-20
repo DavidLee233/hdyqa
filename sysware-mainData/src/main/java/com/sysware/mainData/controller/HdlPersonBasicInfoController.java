@@ -172,4 +172,48 @@ public class HdlPersonBasicInfoController extends BaseController {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
+
+    /**
+     * 强制同步远程员工基本信息到本地
+     */
+    @PostMapping("/remote/forceSync")
+    public R<Map<String, Object>> forceSyncRemote() {
+        try {
+            Map<String, Object> result = remoteDataService.forceSyncPersonBasicInfos();
+            if (isSyncSuccess(result)) {
+                return R.ok(result);
+            }
+            String message = resolveSyncFailureMessage(result, "强制同步员工基本信息失败");
+            return R.fail(message, result);
+        } catch (Exception e) {
+            return R.fail("强制同步员工基本信息失败: " + e.getMessage());
+        }
+    }
+
+    private boolean isSyncSuccess(Map<String, Object> result) {
+        if (result == null) {
+            return false;
+        }
+        Object success = result.get("success");
+        if (success == null) {
+            return false;
+        }
+        if (success instanceof Boolean) {
+            return (Boolean) success;
+        }
+        String normalized = String.valueOf(success).trim().toLowerCase();
+        return "1".equals(normalized) || "true".equals(normalized);
+    }
+
+    private String resolveSyncFailureMessage(Map<String, Object> result, String fallback) {
+        if (result == null) {
+            return fallback;
+        }
+        Object message = result.get("message");
+        if (message == null) {
+            return fallback;
+        }
+        String text = String.valueOf(message).trim();
+        return text.isEmpty() ? fallback : text;
+    }
 }

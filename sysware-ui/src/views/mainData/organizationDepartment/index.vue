@@ -118,6 +118,16 @@
           :loading="exportLoading"
         >导出</el-button>
       </el-col>
+      <el-col v-if="dataSource === 'remote'" :span="1.5">
+        <el-button
+          type="danger"
+          plain
+          icon="el-icon-refresh"
+          size="mini"
+          @click="handleForceSync"
+          :loading="syncLoading"
+        >强制同步</el-button>
+      </el-col>
       <right-toolbar :showSearch.sync="showSearch" :searchValue.sync="queryParams.searchValue" @queryTable="getList"></right-toolbar>
     </el-row>
 
@@ -130,6 +140,7 @@
         show-icon>
         <span>当前查看的是院主数据，数据来源于远程数据库(139.10.2.90)，此处为只读模式。</span>
       </el-alert>
+      <div class="remote-sync-meta">最近同步：{{ getLatestSyncSummary() }}</div>
     </div>
 
     <el-table v-loading="loading" :data="organizationDepartmentList" @selection-change="handleSelectionChange">
@@ -246,10 +257,13 @@ import {
   getOrganizationDepartment,
   delOrganizationDepartment,
   addOrganizationDepartment,
-  updateOrganizationDepartment, listRemoteOrganizationDepartment,
+  updateOrganizationDepartment,
+  listRemoteOrganizationDepartment,
+  forceSyncRemoteOrganizationDepartment,
 } from "@/api/mainData/organizationDepartment";
 import {getUser} from "@/api/qaSystem/qaCommon";
 import { getFieldMappingByType } from "@/api/mainData/mainDataMapping";
+import { listLatestMainDataSyncBatch } from "@/api/mainData/syncBatch";
 
 export default {
   name: "OrganizationDepartment",
@@ -262,6 +276,8 @@ export default {
       loading: true,
       // 导出遮罩层
       exportLoading: false,
+      // 强制同步遮罩层
+      syncLoading: false,
       // 选中数组
       ids: [],
       // 非单个禁用
@@ -337,6 +353,8 @@ export default {
       dataSource: 'local',
       // 字段映射配置
       fieldMapping: [],
+      // 最近同步批次
+      latestSyncBatchList: [],
     };
   },
 
@@ -444,6 +462,11 @@ export default {
       this.multiple = true;
       // 重置查询并重新加载数据
       this.resetQuery();
+      if (source === 'remote') {
+        this.loadLatestSyncBatch();
+      } else {
+        this.latestSyncBatchList = [];
+      }
     },
     /**   表单重置   */
     reset() {
@@ -608,6 +631,69 @@ export default {
       }).catch(() => {
         this.exportLoading = false;
       });
+    },
+
+    /** 强制同步按钮操作 */
+    handleForceSync() {
+      this.$confirm('是否确认强制同步院主组织部门数据到本地？', "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      }).then(() => {
+        this.syncLoading = true;
+        forceSyncRemoteOrganizationDepartment().then(response => {
+          const stats = response.data || {};
+          if (this.isSyncSuccessResponse(response, stats)) {
+            this.$message.success(`同步完成：拉取${stats.fetched || 0}，新增${stats.inserted || 0}，更新${stats.updated || 0}，失效${stats.invalidated || 0}，失败${stats.failed || 0}`);
+            this.getList();
+            this.loadLatestSyncBatch();
+            return;
+          }
+          const failMsg = stats.message || response.msg || '强制同步失败';
+          this.$message.error(failMsg);
+          this.loadLatestSyncBatch();
+        }).catch(error => {
+          console.error("强制同步失败", error);
+          this.$message.error('强制同步失败，请稍后重试');
+        }).finally(() => {
+          this.syncLoading = false;
+        });
+      }).catch(() => {});
+    },
+
+    isSyncSuccessResponse(response, stats) {
+      if (!response || response.code !== 200) {
+        return false;
+      }
+      if (!stats || typeof stats.success === 'undefined' || stats.success === null) {
+        return true;
+      }
+      if (typeof stats.success === 'boolean') {
+        return stats.success;
+      }
+      const normalized = String(stats.success).trim().toLowerCase();
+      return normalized === '1' || normalized === 'true';
+    },
+
+    /** 加载最近同步批次 */
+    loadLatestSyncBatch() {
+      listLatestMainDataSyncBatch('1', 1).then(response => {
+        if (response.code === 200) {
+          this.latestSyncBatchList = response.data || [];
+        }
+      }).catch(error => {
+        console.error("加载最近同步批次失败", error);
+      });
+    },
+
+    getLatestSyncSummary() {
+      if (!this.latestSyncBatchList || this.latestSyncBatchList.length === 0) {
+        return '暂无记录';
+      }
+      const latest = this.latestSyncBatchList[0];
+      const timeText = latest.startTime ? String(latest.startTime).replace('T', ' ') : '-';
+      const resultText = latest.success === '1' ? '成功' : '失败';
+      return `${timeText}（${resultText}，批次：${latest.batchNo || '-'}）`;
     },
   }
 }
@@ -783,6 +869,12 @@ export default {
 /* 远程数据提示 */
 .remote-tip {
   margin-bottom: 15px;
+}
+
+.remote-sync-meta {
+  margin-top: 8px;
+  color: #606266;
+  font-size: 12px;
 }
 
 /* 远程数据标签 */

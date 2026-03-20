@@ -303,7 +303,7 @@ CREATE TABLE `hdl_main_data_mapping`  (
   `source_field` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '源数据字段',
   `target_field` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目标数据字段',
   `field_meaning` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '字段含义',
-  `type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '字段类型（0组织部门、1员工基本信息、2员工工作信息）',
+  `type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '字段类型（1组织部门、2员工基本信息、3员工工作信息）',
   `create_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建者姓名',
   `create_id` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建者工号',
   `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
@@ -385,6 +385,38 @@ INSERT INTO `hdl_main_data_mapping` VALUES (2101732984985485808, 'ISMAINJOB', 'i
 INSERT INTO `hdl_main_data_mapping` VALUES (2101732984985485809, 'OLD_PK_PSNJOB', 'old_pk_psnjob', '旧nc人员工作记录主键', '3', '系统管理员', 'admin', '2026-01-22 15:56:27', NULL, NULL, NULL);
 INSERT INTO `hdl_main_data_mapping` VALUES (2101732984985485810, 'OTHER_JOBTITLE', 'other_job_title', '其他职务名称', '3', '系统管理员', 'admin', '2026-01-22 15:56:27', NULL, NULL, NULL);
 INSERT INTO `hdl_main_data_mapping` VALUES (2101732984985485811, 'JOB_LEVEL', 'job_level', '职级', '3', '系统管理员', 'admin', '2026-01-22 15:56:27', NULL, NULL, NULL);
+
+-- ----------------------------
+-- Table structure for hdl_main_data_sync_batch
+-- ----------------------------
+DROP TABLE IF EXISTS `hdl_main_data_sync_batch`;
+CREATE TABLE `hdl_main_data_sync_batch`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `batch_no` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '批次号',
+  `data_type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '数据类型（1组织部门、2员工基本信息、3员工工作信息）',
+  `trigger_mode` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '触发方式（manual/job）',
+  `success` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '是否成功（1成功、0失败）',
+  `message` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '结果消息',
+  `start_time` datetime(0) NULL DEFAULT NULL COMMENT '开始时间',
+  `end_time` datetime(0) NULL DEFAULT NULL COMMENT '结束时间',
+  `duration_ms` bigint(0) NULL DEFAULT NULL COMMENT '耗时（毫秒）',
+  `fetched_count` int(0) NULL DEFAULT 0 COMMENT '拉取数量',
+  `inserted_count` int(0) NULL DEFAULT 0 COMMENT '新增数量',
+  `updated_count` int(0) NULL DEFAULT 0 COMMENT '更新数量',
+  `invalidated_count` int(0) NULL DEFAULT 0 COMMENT '失效数量',
+  `skipped_count` int(0) NULL DEFAULT 0 COMMENT '跳过数量',
+  `conflict_count` int(0) NULL DEFAULT 0 COMMENT '冲突数量',
+  `failed_count` int(0) NULL DEFAULT 0 COMMENT '失败数量',
+  `operator_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行人名称或任务名',
+  `operator_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行人工号或任务标识',
+  `create_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建者姓名',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新者姓名',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_mdsb_data_type_start_time`(`data_type`, `start_time`) USING BTREE,
+  KEY `idx_mdsb_batch_no`(`batch_no`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for hdl_organization_department
