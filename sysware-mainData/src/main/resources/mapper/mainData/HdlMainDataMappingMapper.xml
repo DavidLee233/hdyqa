@@ -44,7 +44,7 @@
     </select>
 
     <!-- 根据类型查询字段映射 -->
-    <select id="selectMainDataMappingByType" parameterType="String" resultMap="HdlMainDataMappingResult">
+    <select id="selectMainDataMappingByType" parameterType="String" resultType="com.sysware.mainData.domain.vo.HdlMainDataMappingVo">
         <include refid="selectHdlMainDataMappingVo"/>
         where type = #{type}
         order by target_field

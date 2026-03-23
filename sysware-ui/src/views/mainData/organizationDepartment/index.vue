@@ -118,15 +118,46 @@
           :loading="exportLoading"
         >导出</el-button>
       </el-col>
+      <el-col v-if="dataSource === 'local'" :span="2.4">
+        <div class="schedule-switch-box">
+          <span class="schedule-switch-text">{{ backupSwitchLabel }}</span>
+          <el-switch
+            v-model="backupTaskEnabled"
+            :loading="scheduleSwitchLoading"
+            :active-color="'#13ce66'"
+            :inactive-color="'#909399'"
+            @change="handleBackupTaskSwitchChange"
+          />
+        </div>
+      </el-col>
       <el-col v-if="dataSource === 'remote'" :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-refresh"
-          size="mini"
-          @click="handleForceSync"
-          :loading="syncLoading"
-        >强制同步</el-button>
+        <el-dropdown @command="handleForceSync">
+          <el-button
+            type="danger"
+            plain
+            icon="el-icon-refresh"
+            size="mini"
+            :loading="syncLoading"
+          >
+            强制同步<i class="el-icon-arrow-down el-icon--right"></i>
+          </el-button>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="full">全量同步</el-dropdown-item>
+            <el-dropdown-item command="incremental">增量同步</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </el-col>
+      <el-col v-if="dataSource === 'remote'" :span="2.4">
+        <div class="schedule-switch-box">
+          <span class="schedule-switch-text">{{ syncSwitchLabel }}</span>
+          <el-switch
+            v-model="syncTaskEnabled"
+            :loading="scheduleSwitchLoading"
+            :active-color="'#13ce66'"
+            :inactive-color="'#909399'"
+            @change="handleSyncTaskSwitchChange"
+          />
+        </div>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" :searchValue.sync="queryParams.searchValue" @queryTable="getList"></right-toolbar>
     </el-row>
@@ -264,6 +295,7 @@ import {
 import {getUser} from "@/api/qaSystem/qaCommon";
 import { getFieldMappingByType } from "@/api/mainData/mainDataMapping";
 import { listLatestMainDataSyncBatch } from "@/api/mainData/syncBatch";
+import { getMainDataScheduleSwitchStatus, updateMainDataScheduleSwitch } from "@/api/mainData/scheduleSwitch";
 
 export default {
   name: "OrganizationDepartment",
@@ -355,6 +387,13 @@ export default {
       fieldMapping: [],
       // 最近同步批次
       latestSyncBatchList: [],
+      scheduleSwitchLoading: false,
+      backupTaskEnabled: false,
+      syncTaskEnabled: false,
+      dataTypeCode: '1',
+      dataTypeName: '组织部门',
+      backupSwitchLabel: '定时备份',
+      syncSwitchLabel: '定时同步',
     };
   },
 
@@ -362,6 +401,7 @@ export default {
     this.getCurrentUser();
     this.getList();
     this.loadFieldMapping();
+    this.loadScheduleSwitchStatus();
   },
 
   methods: {
@@ -378,6 +418,54 @@ export default {
         console.error("加载字段映射失败", error);
         this.fieldMapping = [];
       }
+    },
+
+    loadScheduleSwitchStatus() {
+      getMainDataScheduleSwitchStatus(this.dataTypeCode).then(response => {
+        const data = response.data || {};
+        this.backupTaskEnabled = typeof data.backupEnabled === 'boolean' ? data.backupEnabled : false;
+        this.syncTaskEnabled = typeof data.syncEnabled === 'boolean' ? data.syncEnabled : false;
+      }).catch(error => {
+        console.error('加载主数据定时开关状态失败', error);
+      });
+    },
+
+    updateScheduleSwitch(switchType, enabled) {
+      return updateMainDataScheduleSwitch({
+        dataType: this.dataTypeCode,
+        switchType,
+        enabled
+      });
+    },
+
+    handleBackupTaskSwitchChange(value) {
+      const previousValue = !value;
+      this.scheduleSwitchLoading = true;
+      this.updateScheduleSwitch('backup', value).then(() => {
+        this.backupTaskEnabled = value;
+        this.$message.success(`${this.dataTypeName}${value ? '定时备份已开启' : '定时备份已关闭'}`);
+      }).catch(error => {
+        console.error('切换定时备份开关失败', error);
+        this.backupTaskEnabled = previousValue;
+        this.$message.error(`${this.dataTypeName}定时备份开关切换失败`);
+      }).finally(() => {
+        this.scheduleSwitchLoading = false;
+      });
+    },
+
+    handleSyncTaskSwitchChange(value) {
+      const previousValue = !value;
+      this.scheduleSwitchLoading = true;
+      this.updateScheduleSwitch('sync', value).then(() => {
+        this.syncTaskEnabled = value;
+        this.$message.success(`${this.dataTypeName}${value ? '定时同步已开启' : '定时同步已关闭'}`);
+      }).catch(error => {
+        console.error('切换定时同步开关失败', error);
+        this.syncTaskEnabled = previousValue;
+        this.$message.error(`${this.dataTypeName}定时同步开关切换失败`);
+      }).finally(() => {
+        this.scheduleSwitchLoading = false;
+      });
     },
 
     /** 将查询参数转换为远程格式 */
@@ -634,14 +722,16 @@ export default {
     },
 
     /** 强制同步按钮操作 */
-    handleForceSync() {
-      this.$confirm('是否确认强制同步院主组织部门数据到本地？', "提示", {
+    handleForceSync(syncMode) {
+      const mode = syncMode || 'full';
+      const syncModeLabel = mode === 'incremental' ? '增量同步' : '全量同步';
+      this.$confirm(`是否确认${syncModeLabel}院主组织部门数据到本地？`, "提示", {
         confirmButtonText: "确定",
         cancelButtonText: "取消",
         type: "warning"
       }).then(() => {
         this.syncLoading = true;
-        forceSyncRemoteOrganizationDepartment().then(response => {
+        forceSyncRemoteOrganizationDepartment(mode).then(response => {
           const stats = response.data || {};
           if (this.isSyncSuccessResponse(response, stats)) {
             this.$message.success(`同步完成：拉取${stats.fetched || 0}，新增${stats.inserted || 0}，更新${stats.updated || 0}，失效${stats.invalidated || 0}，失败${stats.failed || 0}`);
@@ -867,6 +957,19 @@ export default {
 }
 
 /* 远程数据提示 */
+.schedule-switch-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+}
+
+.schedule-switch-text {
+  font-size: 12px;
+  color: #606266;
+  white-space: nowrap;
+}
+
 .remote-tip {
   margin-bottom: 15px;
 }

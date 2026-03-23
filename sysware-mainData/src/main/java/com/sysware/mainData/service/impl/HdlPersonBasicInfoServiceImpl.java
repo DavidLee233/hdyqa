@@ -29,12 +29,11 @@ import java.util.Collection;
 import java.util.*;
 
 import static com.sysware.mainData.action.personBasicInfoAction.buildPersonBasicQueryWrapper;
-
 /**
- * 员工基本信息数据Service业务层处理
- *
- * @author aa
- * @date 2026-01-15
+ * @project npic
+ * @description HdlPersonBasicInfoServiceImpl服务实现类，负责员工基本信息主数据业务规则执行、数据处理与流程编排。
+ * @author DavidLee233
+ * @date 2026/3/20
  */
 @RequiredArgsConstructor
 @Service
@@ -42,17 +41,26 @@ public class HdlPersonBasicInfoServiceImpl implements IHdlPersonBasicInfoService
 
     private final HdlPersonBasicInfoMapper baseMapper;
     private final ISysTableFieldService tableFieldService;
-
     /**
-     * 查询员工基本信息数据
+     * @description 根据主键查询单条员工基本信息主数据详情信息。
+     * @params pkPsndoc 员工基本信息主键编码
+     *
+      * @return HdlPersonBasicInfoVo 员工基本信息展示对象，用于前端详情或列表展示。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @Override
     public HdlPersonBasicInfoVo queryById(String pkPsndoc){
         return baseMapper.selectVoById(pkPsndoc);
     }
-
     /**
-     * 查询员工基本信息数据列表
+     * @description 按筛选条件分页查询员工基本信息主数据并封装为表格数据返回。
+     * @params bo 员工基本信息主数据分页查询条件业务对象
+     * @params pageQuery 分页查询参数（页码、每页条数与排序规则）
+     *
+      * @return TableDataInfo 表格分页结果（包含记录列表与总条数），用于前端列表展示。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @Override
     public TableDataInfo queryPageList(HdlPersonBasicInfoBo bo, PageQuery pageQuery) {
@@ -62,10 +70,13 @@ public class HdlPersonBasicInfoServiceImpl implements IHdlPersonBasicInfoService
         IPage<HdlPersonBasicInfoVo> result = baseMapper.selectVoPage(page, buildPersonBasicQueryWrapper(bo, pageQuery));
         return TableDataInfo.build(result);
     }
-
-
     /**
-     * 新增员工基本信息数据
+     * @description 将业务对象转换为实体并新增员工基本信息主数据记录。
+     * @params bo 员工基本信息主数据新增业务请求对象
+     *
+      * @return Boolean 业务执行结果标记（true成功，false失败）。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @Override
     public Boolean insertByBo(HdlPersonBasicInfoBo bo) {
@@ -82,9 +93,13 @@ public class HdlPersonBasicInfoServiceImpl implements IHdlPersonBasicInfoService
         }
         return flag;
     }
-
     /**
-     * 修改员工基本信息数据
+     * @description 按业务对象更新员工基本信息主数据记录并校验关键字段。
+     * @params bo 员工基本信息主数据编辑业务请求对象
+     *
+      * @return Boolean 业务执行结果标记（true成功，false失败）。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @Override
     public Boolean updateByBo(HdlPersonBasicInfoBo bo) {
@@ -96,16 +111,25 @@ public class HdlPersonBasicInfoServiceImpl implements IHdlPersonBasicInfoService
         validEntityBeforeSave(update);
         return baseMapper.updateById(update) > 0;
     }
-
     /**
-     * 保存前的数据校验
+     * @description 执行validEntityBeforeSave方法，完成员工基本信息主数据相关业务处理。
+     * @params entity 待持久化的实体对象
+     *
+      * @return void 无返回值，方法执行后通过副作用更新系统状态。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     private void validEntityBeforeSave(HdlPersonBasicInfo entity){
         //TODO 做一些数据校验,如唯一约束
     }
-
     /**
-     * 批量删除员工基本信息数据
+     * @description 按业务校验规则批量删除员工基本信息主数据记录。
+     * @params ids 主键ID集合
+     * @params isValid 数据有效标记（0无效、1有效）
+     *
+      * @return Boolean 业务执行结果标记（true成功，false失败）。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @Override
     public Boolean deleteWithValidByIds(Collection<String> ids, Boolean isValid) {
@@ -114,9 +138,13 @@ public class HdlPersonBasicInfoServiceImpl implements IHdlPersonBasicInfoService
         }
         return baseMapper.deleteBatchIds(ids) > 0;
     }
-
     /**
-     * 查询导出数据
+     * @description 执行selectPBIList方法，完成员工基本信息主数据相关业务处理。
+     * @params pbi 员工基本信息实体对象
+     *
+      * @return List<HdlPersonBasicInfo> 员工基本信息列表结果，用于批量处理或前端展示。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     public List<HdlPersonBasicInfo> selectPBIList(HdlPersonBasicInfo pbi){
         return baseMapper.selectPBIList(pbi);

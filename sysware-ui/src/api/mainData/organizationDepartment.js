@@ -63,9 +63,12 @@ export function exportRemoteOrganizationDepartment(query) {
 }
 
 // 强制同步远端组织部门到本地
-export function forceSyncRemoteOrganizationDepartment() {
+export function forceSyncRemoteOrganizationDepartment(syncMode) {
   return request({
     url: '/mainData/organizationDepartment/remote/forceSync',
-    method: 'post'
+    method: 'post',
+    data: {
+      syncMode: syncMode || 'full'
+    }
   })
 }

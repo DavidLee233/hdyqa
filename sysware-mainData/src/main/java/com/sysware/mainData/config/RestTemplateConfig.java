@@ -5,8 +5,22 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * @project npic
+ * @description RestTemplateConfig配置类，负责注册主数据模块配置相关运行组件与参数。
+ * @author DavidLee233
+ * @date 2026/3/20
+ */
 @Configuration
 public class RestTemplateConfig {
+    /**
+     * @description 执行restTemplate方法，完成主数据模块配置相关业务处理。
+     * @params 无
+     *
+      * @return RestTemplate 类型业务结果。
+     * @author DavidLee233
+     * @date 2026/3/20
+     */
     @Bean
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

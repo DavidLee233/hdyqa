@@ -7,6 +7,12 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * @project npic
+ * @description RemoteDataConfig配置类，负责注册远端主数据相关运行组件与参数。
+ * @author DavidLee233
+ * @date 2026/3/20
+ */
 @Data
 @Component
 @ConfigurationProperties(prefix = "remote.data")

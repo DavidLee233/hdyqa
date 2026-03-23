@@ -20,9 +20,11 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 /**
- * 远程数据控制器
+ * @project npic
+ * @description RemoteDataController控制器，负责远端主数据相关接口请求接收、参数处理与结果响应。
+ * @author DavidLee233
+ * @date 2026/3/20
  */
 @RestController
 @RequestMapping("/mainData/remote")
@@ -34,9 +36,13 @@ public class RemoteDataController {
 
     @Autowired
     private IRemoteDataService remoteDataService;
-
     /**
-     * 获取当前Token信息（仅用于调试）
+     * @description 查询当前缓存的远端令牌信息并返回可视化结果。
+     * @params 无
+     *
+      * @return R 统一响应结果对象（包含状态码、消息与业务数据）。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @GetMapping("/token/info")
     public R getTokenInfo() {
@@ -58,9 +64,13 @@ public class RemoteDataController {
         }
         return R.fail("Token信息为空");
     }
-
     /**
-     * 刷新Token（仅用于调试）
+     * @description 主动刷新远端访问令牌并返回最新令牌信息。
+     * @params 无
+     *
+      * @return R 统一响应结果对象（包含状态码、消息与业务数据）。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @PostMapping("/token/refresh")
     @Log(title = "远程数据", businessType = BusinessType.OTHER)
@@ -69,14 +79,17 @@ public class RemoteDataController {
             ApiTokenResponse newToken = remoteTokenService.refreshToken();
             return R.ok("Token刷新成功", newToken);
         } catch (Exception e) {
-            logger.error("刷新Token失败", e);
+            logger.error("刷新令牌失败", e);
             return R.fail("刷新Token失败: " + e.getMessage());
         }
     }
-
     /**
-     * 查询远程组织部门列表
-     * 适配您当前的分页插件版本
+     * @description 调用远端接口分页查询远端主数据并适配前端分页结构。
+     * @params params 动态参数集合（承载远端查询条件、分页与同步模式）
+     *
+      * @return RemoteTableDataInfo 远端表格分页结果（包含远端数据列表与总条数）。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @PostMapping("/remote/list")
     public RemoteTableDataInfo listRemote(@RequestBody Map<String, Object> params) {
@@ -129,9 +142,14 @@ public class RemoteDataController {
             return RemoteTableDataInfo.build(null, 0L, new PageQuery());
         }
     }
-
     /**
-     * 导出远程组织部门数据
+     * @description 导出远端远端主数据查询结果并写入响应流。
+     * @params params 动态参数集合（承载远端查询条件、分页与同步模式）
+     * @params response HTTP响应对象，用于写出导出文件或接口返回内容
+     *
+      * @return void 无返回值，导出结果已写入HTTP响应输出流供前端下载。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     @PostMapping("/remote/export")
     @Log(title = "远程组织部门导出", businessType = BusinessType.EXPORT)
@@ -167,9 +185,13 @@ public class RemoteDataController {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
-
     /**
-     * 导出空Excel
+     * @description 导出远端主数据数据并输出为文件流。
+     * @params param1 动态参数值
+     *
+      * @return void 无返回值，导出结果已写入HTTP响应输出流供前端下载。
+     * @author DavidLee233
+     * @date 2026/3/20
      */
     private void exportEmptyExcel(HttpServletResponse response) throws Exception {
         // 这里可以根据您的导出工具类创建空的Excel模板

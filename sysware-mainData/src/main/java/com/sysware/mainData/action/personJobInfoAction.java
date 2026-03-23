@@ -9,13 +9,22 @@ import com.sysware.mainData.domain.HdlPersonJobInfo;
 import com.sysware.mainData.domain.bo.HdlPersonBasicInfoBo;
 import com.sysware.mainData.domain.bo.HdlPersonJobInfoBo;
 
+/**
+ * @project npic
+ * @description personJobInfoAction查询构建工具类，负责组装员工工作信息主数据过滤条件表达式。
+ * @author DavidLee233
+ * @date 2026/3/20
+ */
 public class personJobInfoAction {
     /**
-     * @author lxd
-     * @description: 进行表格页面查询
-     * @param bo
-     * @param pageQuery
-     **/
+     * @description 构建员工工作信息主数据处理所需的中间对象或条件。
+     * @params bo 员工工作信息主数据业务请求对象（包含查询与变更字段）
+     * @params pageQuery 分页查询参数（页码、每页条数与排序规则）
+     *
+      * @return LambdaQueryWrapper<HdlPersonJobInfo> 员工工作信息主数据查询条件构造器，用于后续数据库过滤与排序。
+     * @author DavidLee233
+     * @date 2026/3/20
+     */
     public static LambdaQueryWrapper<HdlPersonJobInfo> buildPersonJobQueryWrapper(HdlPersonJobInfoBo bo, PageQuery pageQuery) {
         LambdaQueryWrapper<HdlPersonJobInfo> lqw = Wrappers.lambdaQuery();
         // 首先 进行局部精确匹配查询

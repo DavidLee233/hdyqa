@@ -3,6 +3,12 @@ package com.sysware.mainData.domain;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+/**
+ * @project npic
+ * @description ApiTokenResponse领域实体，描述远端令牌响应数据核心数据结构与属性。
+ * @author DavidLee233
+ * @date 2026/3/20
+ */
 @Data
 public class ApiTokenResponse {
 
@@ -21,6 +27,14 @@ public class ApiTokenResponse {
     // 本地记录的时间戳
     private long timestamp;
 
+    /**
+     * @description 输出对象关键信息字符串，便于日志追踪与排查。
+     * @params 无
+     *
+      * @return String 字符串类型业务结果。
+     * @author DavidLee233
+     * @date 2026/3/20
+     */
     @Override
     public String toString() {
         return "ApiTokenResponse{" +

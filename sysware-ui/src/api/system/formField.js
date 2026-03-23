@@ -88,3 +88,12 @@ export function selectListByFieldId(fieldId) {
     method: 'get'
   })
 }
+
+// 复制表单字段
+export function copyFormField(data) {
+  return request({
+    url: '/system/formField/copyFormField',
+    method: 'post',
+    data: data
+  })
+}

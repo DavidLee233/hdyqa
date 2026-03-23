@@ -5,17 +5,24 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.sysware.common.core.domain.PageQuery;
 import com.sysware.mainData.domain.HdlMainDataMapping;
-import com.sysware.mainData.domain.HdlOrganizationDepartment;
 import com.sysware.mainData.domain.bo.HdlMainDataMappingBo;
-import com.sysware.mainData.domain.bo.HdlOrganizationDepartmentBo;
 
+/**
+ * @project npic
+ * @description mainDataMappingAction查询构建工具类，负责组装主数据映射过滤条件表达式。
+ * @author DavidLee233
+ * @date 2026/3/20
+ */
 public class mainDataMappingAction {
     /**
-     * @author lxd
-     * @description: 进行表格页面查询
-     * @param bo
-     * @param pageQuery
-     **/
+     * @description 构建主数据映射处理所需的中间对象或条件。
+     * @params bo 主数据映射业务请求对象（包含查询与变更字段）
+     * @params pageQuery 分页查询参数（页码、每页条数与排序规则）
+     *
+      * @return LambdaQueryWrapper<HdlMainDataMapping> 主数据映射查询条件构造器，用于后续数据库过滤与排序。
+     * @author DavidLee233
+     * @date 2026/3/20
+     */
     public static LambdaQueryWrapper<HdlMainDataMapping> buildMappingQueryWrapper(HdlMainDataMappingBo bo, PageQuery pageQuery) {
         LambdaQueryWrapper<HdlMainDataMapping> lqw = Wrappers.lambdaQuery();
         // 首先 进行局部精确匹配查询

@@ -249,6 +249,23 @@ xss:
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
 
+main-data:
+  # 同步与备份任务最小间隔（分钟）
+  sync-backup-min-interval-minutes: 60
+  # 周备份保留周数
+  backup-retention-weeks: 10
+  # 主数据备份文件目录
+  backup-dir: ${sysware.profile}/main-data-backup
+  handler:
+    # 是否启用本地自动注册 Handler 任务
+    enabled: true
+    # 时区
+    zone-id: Asia/Shanghai
+    # 主数据同步 Handler（首轮全量，后续增量）
+    sync-cron: 0 0 1 * * ?
+    # 主数据周备份 Handler（与同步间隔 >= 1 小时）
+    backup-cron: 0 30 2 ? * SUN
+
 # 全局线程池相关配置
 thread-pool:
   # 是否开启线程池

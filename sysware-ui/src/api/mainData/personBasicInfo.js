@@ -63,9 +63,12 @@ export function exportRemotePersonBasicInfo(query) {
 }
 
 // 强制同步远端员工基本信息到本地
-export function forceSyncRemotePersonBasicInfo() {
+export function forceSyncRemotePersonBasicInfo(syncMode) {
   return request({
     url: '/mainData/personBasicInfo/remote/forceSync',
-    method: 'post'
+    method: 'post',
+    data: {
+      syncMode: syncMode || 'full'
+    }
   })
 }

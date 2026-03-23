@@ -63,9 +63,12 @@ export function exportRemotePersonJobInfo(query) {
 }
 
 // 强制同步远端员工工作信息到本地
-export function forceSyncRemotePersonJobInfo() {
+export function forceSyncRemotePersonJobInfo(syncMode) {
   return request({
     url: '/mainData/personJobInfo/remote/forceSync',
-    method: 'post'
+    method: 'post',
+    data: {
+      syncMode: syncMode || 'full'
+    }
   })
 }

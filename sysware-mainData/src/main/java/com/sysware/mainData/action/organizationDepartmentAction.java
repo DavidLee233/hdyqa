@@ -8,13 +8,22 @@ import com.sysware.mainData.domain.HdlMainDataMapping;
 import com.sysware.mainData.domain.HdlOrganizationDepartment;
 import com.sysware.mainData.domain.bo.HdlOrganizationDepartmentBo;
 
+/**
+ * @project npic
+ * @description organizationDepartmentAction查询构建工具类，负责组装组织部门主数据过滤条件表达式。
+ * @author DavidLee233
+ * @date 2026/3/20
+ */
 public class organizationDepartmentAction {
     /**
-     * @author lxd
-     * @description: 进行表格页面查询
-     * @param bo
-     * @param pageQuery
-     **/
+     * @description 构建组织部门主数据处理所需的中间对象或条件。
+     * @params bo 组织部门主数据业务请求对象（包含查询与变更字段）
+     * @params pageQuery 分页查询参数（页码、每页条数与排序规则）
+     *
+      * @return LambdaQueryWrapper<HdlOrganizationDepartment> 组织部门主数据查询条件构造器，用于后续数据库过滤与排序。
+     * @author DavidLee233
+     * @date 2026/3/20
+     */
     public static LambdaQueryWrapper<HdlOrganizationDepartment> buildOrgQueryWrapper(HdlOrganizationDepartmentBo bo, PageQuery pageQuery) {
         LambdaQueryWrapper<HdlOrganizationDepartment> lqw = Wrappers.lambdaQuery();
         // 首先 进行局部精确匹配查询

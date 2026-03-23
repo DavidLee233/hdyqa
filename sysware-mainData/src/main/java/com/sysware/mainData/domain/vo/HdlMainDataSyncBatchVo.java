@@ -4,9 +4,11 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-
 /**
- * 主数据同步批次记录视图对象
+ * @project npic
+ * @description HdlMainDataSyncBatchVo业务出参对象，封装主数据同步批次记录返回与展示字段。
+ * @author DavidLee233
+ * @date 2026/3/20
  */
 @Data
 public class HdlMainDataSyncBatchVo implements Serializable {
@@ -20,6 +22,8 @@ public class HdlMainDataSyncBatchVo implements Serializable {
     private String dataType;
 
     private String triggerMode;
+
+    private String syncMode;
 
     private String success;
 
