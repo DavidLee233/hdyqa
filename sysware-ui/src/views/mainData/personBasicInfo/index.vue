@@ -273,7 +273,6 @@ import {
 } from "@/api/mainData/personBasicInfo";
 import {getUser} from "@/api/qaSystem/qaCommon";
 import {getFieldMappingByType} from "@/api/mainData/mainDataMapping";
-import {listOrganizationDepartment, listRemoteOrganizationDepartment} from "@/api/mainData/organizationDepartment";
 import { listLatestMainDataSyncBatch } from "@/api/mainData/syncBatch";
 import { getMainDataScheduleSwitchStatus, updateMainDataScheduleSwitch } from "@/api/mainData/scheduleSwitch";
 
@@ -468,7 +467,7 @@ export default {
     convertToRemoteQuery(query) {
       // 新接口中，后端会处理字段映射，前端只需要传递原始参数
       const remoteQuery = {
-        pageNum: query.pageNum - 1, // 远程接口从0开始
+        pageNum: query.pageNum,
         pageSize: query.pageSize,
       };
 
@@ -495,13 +494,21 @@ export default {
         listRemotePersonBasicInfo(apiParams);
 
       apiPromise.then(response => {
-        let data = response.rows || [];
-        let total = response.total || 0;
+        if (response && typeof response.code !== 'undefined' && response.code !== 200) {
+          this.personBasicInfoList = [];
+          this.total = 0;
+          this.$message.error(response.msg || '查询数据失败');
+          this.loading = false;
+          return;
+        }
+        const data = Array.isArray(response.rows) ? response.rows : [];
+        const total = Number(response.total) || 0;
         this.personBasicInfoList = data;
         this.total = total;
         this.loading = false;
       }).catch(error =>{
         console.error("获取数据失败", error);
+        this.$message.error('获取数据失败，请稍后重试');
         this.loading = false;
       });
     },

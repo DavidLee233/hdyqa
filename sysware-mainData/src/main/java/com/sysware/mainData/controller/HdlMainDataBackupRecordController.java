@@ -1,5 +1,6 @@
 package com.sysware.mainData.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.sysware.common.core.controller.BaseController;
 import com.sysware.common.core.domain.PageQuery;
 import com.sysware.common.core.domain.R;
@@ -25,6 +26,7 @@ import java.util.Map;
  */
 @Validated
 @RestController
+@SaCheckLogin
 @RequiredArgsConstructor
 @RequestMapping("/mainData/backupRecord")
 public class HdlMainDataBackupRecordController extends BaseController {

@@ -4,7 +4,9 @@ logs/
 sysware-ui/dist/
 sysware-ui/node_modules/
 需求.txt
-
+下游接口调用接口规范.md
+主数据平台真实环境预演清单与上线检查表.md
+生产环境部署文档.md
 
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

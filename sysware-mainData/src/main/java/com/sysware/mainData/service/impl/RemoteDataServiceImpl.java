@@ -134,6 +134,8 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
     private long syncBackupMinIntervalMinutes;
     @Value("${main-data.sync-audit-log-dir:logs}")
     private String syncAuditLogDir;
+    @Value("${main-data.remote-query-retry-count:1}")
+    private int remoteQueryRetryCount;
     private final Map<String, Map<String, String>> cachedFieldMappingByType = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> cachedReverseMappingByType = new ConcurrentHashMap<>();
     private final Map<String, Long> lastLoadTimeByType = new ConcurrentHashMap<>();
@@ -208,7 +210,15 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                                                  String apiPath,
                                                  Map<String, String> filterMatchTypes,
                                                  Map<String, String> defaultRemoteFields) {
-        return queryRemoteData(params, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields, true);
+        return queryRemoteData(
+            params,
+            mainDataType,
+            apiPath,
+            filterMatchTypes,
+            defaultRemoteFields,
+            true,
+            Math.max(remoteQueryRetryCount, 0)
+        );
     }
 
     /**
@@ -229,18 +239,20 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                                                  String apiPath,
                                                  Map<String, String> filterMatchTypes,
                                                  Map<String, String> defaultRemoteFields,
-                                                 boolean allowRetryOnUnauthorized) {
+                                                 boolean allowRetryOnUnauthorized,
+                                                 int retryCountLeft) {
+        Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
         try {
             String token = remoteTokenService.getValidToken();
             if (StringUtils.isEmpty(token)) {
                 throw new RuntimeException("无法获取有效的API Token");
             }
 
-            int pageNum = parseInt(params.get("pageNum"), 0);
-            int pageSize = parseInt(params.get("pageSize"), 10);
+            int pageNum = parseInt(safeParams.get("pageNum"), 0);
+            int pageSize = parseInt(safeParams.get("pageSize"), 10);
             String url = remoteDataConfig.getApiUrl() + apiPath + "?pageNum=" + pageNum + "&pageSize=" + pageSize;
 
-            Map<String, Object> requestBody = buildQueryRequestBody(params, mainDataType, filterMatchTypes, defaultRemoteFields);
+            Map<String, Object> requestBody = buildQueryRequestBody(safeParams, mainDataType, filterMatchTypes, defaultRemoteFields);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -263,12 +275,26 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             }
             logger.warn("令牌无效或过期，刷新后重试一次。类型={}", mainDataType);
             remoteTokenService.refreshToken();
-            return queryRemoteData(params, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields, false);
+            return queryRemoteData(safeParams, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields, false, retryCountLeft);
         } catch (HttpClientErrorException e) {
             logger.error("查询远端主数据请求错误，类型={}，状态码={}，响应体={}",
                 mainDataType, e.getStatusCode(), e.getResponseBodyAsString(), e);
             throw new RuntimeException("查询远端主数据HTTP错误: " + e.getStatusCode(), e);
         } catch (ResourceAccessException e) {
+            if (retryCountLeft > 0) {
+                int currentAttempt = Math.max(remoteQueryRetryCount - retryCountLeft + 1, 1);
+                logger.warn("远端接口连接失败，将重试。类型={}，第{}次重试，剩余重试次数={}，异常={}",
+                    mainDataType, currentAttempt, retryCountLeft - 1, e.getMessage());
+                return queryRemoteData(
+                    safeParams,
+                    mainDataType,
+                    apiPath,
+                    filterMatchTypes,
+                    defaultRemoteFields,
+                    allowRetryOnUnauthorized,
+                    retryCountLeft - 1
+                );
+            }
             logger.error("远端接口连接失败，类型={}，异常信息={}", mainDataType, e.getMessage(), e);
             throw new RuntimeException("远端API连接失败: " + e.getMessage(), e);
         } catch (Exception e) {
@@ -628,7 +654,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                         continue;
                     }
                     if (!remoteIds.add(id)) {
-                        stats.skipped++;
+                        markConflict(stats, "组织部门", id);
                         continue;
                     }
                     incoming.setEnableState(normalizeEnableState(incoming.getEnableState()));
@@ -670,7 +696,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             }
             markFailedIfNeeded(stats, "组织部门");
         } catch (Exception e) {
-            stats.fail("force sync organization department failed: " + e.getMessage());
+            stats.fail("强制同步组织部门失败：" + e.getMessage());
             logger.error("强制同步组织部门失败", e);
         }
         return finishAndPersist(stats);
@@ -740,7 +766,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                         continue;
                     }
                     if (!remoteIds.add(id)) {
-                        stats.skipped++;
+                        markConflict(stats, "员工基本信息", id);
                         continue;
                     }
                     incoming.setEnableState(normalizeEnableState(incoming.getEnableState()));
@@ -782,7 +808,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             }
             markFailedIfNeeded(stats, "员工基本信息");
         } catch (Exception e) {
-            stats.fail("force sync person basic failed: " + e.getMessage());
+            stats.fail("强制同步员工基本信息失败：" + e.getMessage());
             logger.error("强制同步员工基本信息失败", e);
         }
         return finishAndPersist(stats);
@@ -852,7 +878,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                         continue;
                     }
                     if (!remoteIds.add(id)) {
-                        stats.skipped++;
+                        markConflict(stats, "员工工作信息", id);
                         continue;
                     }
                     if (StrUtil.isBlank(incoming.getEndFlag())) {
@@ -896,7 +922,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             }
             markFailedIfNeeded(stats, "员工工作信息");
         } catch (Exception e) {
-            stats.fail("force sync person job failed: " + e.getMessage());
+            stats.fail("强制同步员工工作信息失败：" + e.getMessage());
             logger.error("强制同步员工工作信息失败", e);
         }
         return finishAndPersist(stats);
@@ -916,6 +942,30 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             return;
         }
         stats.fail(String.format("%s同步存在 %d 条失败记录，请检查批次记录与日志明细", dataTypeName, stats.failed));
+    }
+
+    /**
+     * @description 记录远端重复主键冲突并累计冲突统计，便于同步批次明确区分“跳过”和“冲突”。
+     * @params stats 同步统计对象（包含成功标识、统计数据与错误信息）
+     * @params dataTypeName 主数据类型中文名称
+     * @params id 发生冲突的主键值
+     *
+     * @return void 无返回值，方法执行后通过副作用更新系统状态。
+     * @author DavidLee233
+     * @date 2026/3/23
+     */
+    private void markConflict(SyncStats stats, String dataTypeName, String id) {
+        if (stats == null) {
+            return;
+        }
+        stats.conflict++;
+        stats.skipped++;
+        if (stats.conflict <= 5) {
+            stats.note(String.format("%s存在重复主键，主键=%s", dataTypeName, id));
+        } else if (stats.conflict == 6) {
+            stats.note(dataTypeName + "存在较多重复主键，详细记录请查看日志");
+        }
+        logger.warn("远端同步检测到重复主键冲突，类型={}，主键={}", dataTypeName, id);
     }
 
     /**
@@ -943,7 +993,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
         }
         if (SYNC_MODE_INCREMENTAL.equals(requestedMode) && latestSuccess == null) {
             requestedMode = SYNC_MODE_FULL;
-            stats.note("No successful sync batch found, fallback to full sync.");
+            stats.note("未找到成功同步批次，已回退为全量同步");
         }
         stats.syncMode = requestedMode;
 
@@ -951,7 +1001,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             LocalDateTime watermark = latestSuccess == null ? null : latestSuccess.getEndTime();
             if (watermark == null) {
                 stats.syncMode = SYNC_MODE_FULL;
-                stats.note("No incremental watermark found, fallback to full sync.");
+                stats.note("未获取到增量水位，已回退为全量同步");
                 return fetchAllRemoteRows(mainDataType, apiPath, filterMatchTypes, defaultRemoteFields);
             }
             return fetchIncrementalRemoteRows(mainDataType, apiPath, filterMatchTypes, defaultRemoteFields, watermark, stats);
@@ -1028,7 +1078,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
         String incrementalField = detectIncrementalRemoteField(mainDataType, apiPath, filterMatchTypes, defaultRemoteFields);
         if (StrUtil.isBlank(incrementalField)) {
             stats.syncMode = SYNC_MODE_FULL;
-            stats.note("Incremental field not found, fallback to full sync.");
+            stats.note("未识别到增量字段，已回退为全量同步");
             return fetchAllRemoteRows(mainDataType, apiPath, filterMatchTypes, defaultRemoteFields);
         }
 
@@ -1080,7 +1130,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                 break;
             }
         }
-        stats.note("Incremental sync watermark: " + watermark);
+        stats.note("增量同步水位：" + watermark);
         return incrementalRows;
     }
 
@@ -1503,6 +1553,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
         lines.add("新增记录数=" + stats.inserted);
         lines.add("更新记录数=" + stats.updated);
         lines.add("失效记录数=" + stats.invalidated);
+        lines.add("冲突记录数=" + stats.conflict);
         lines.add("失败记录数=" + stats.failed);
         lines.add("失败原因=" + (stats.success ? "-" : sanitizeAuditValue(stats.message)));
         try {
@@ -1564,7 +1615,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             ? "未采集到远端字段"
             : (stats.unmappedRemoteFieldCount > 0 ? "存在未映射字段" : "远端字段已映射");
         logger.info(
-            "[主数据同步映射审计] 同步时间={}，批次号={}，数据类型={}({})，触发方式={}，同步模式={}，是否成功={}，映射状态={}，映射配置数={}，观察远端字段数={}，已映射字段数={}，未映射字段数={}，映射配置样例=[{}]，映射命中样例=[{}]，未映射字段样例=[{}]，失败原因={}",
+            "[主数据同步映射审计] 同步时间={}，批次号={}，数据类型={}({})，触发方式={}，同步模式={}，是否成功={}，映射状态={}，映射配置数={}，观察远端字段数={}，已映射字段数={}，未映射字段数={}，冲突={}，映射配置样例=[{}]，映射命中样例=[{}]，未映射字段样例=[{}]，失败原因={}",
             syncTime,
             stats.batchNo,
             stats.dataType,
@@ -1577,6 +1628,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             stats.observedRemoteFieldCount,
             stats.mappedRemoteFieldCount,
             stats.unmappedRemoteFieldCount,
+            stats.conflict,
             StrUtil.blankToDefault(stats.mappingConfiguredSample, "-"),
             StrUtil.blankToDefault(stats.mappedObservedSample, "-"),
             StrUtil.blankToDefault(stats.unmappedRemoteFieldSample, "-"),
@@ -1584,7 +1636,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
         );
         if (stats.success) {
             logger.info(
-                "[主数据同步日志] 同步时间={}，批次号={}，数据类型={}({})，触发方式={}，同步模式={}，是否成功={}，拉取={}，新增={}，更新={}，失效={}，失败={}，映射配置数={}，观测远端字段数={}，已映射字段数={}，未映射字段数={}，映射配置样例=[{}]，观测映射样例=[{}]，未映射字段样例=[{}]",
+                "[主数据同步日志] 同步时间={}，批次号={}，数据类型={}({})，触发方式={}，同步模式={}，是否成功={}，拉取={}，新增={}，更新={}，失效={}，冲突={}，失败={}，映射配置数={}，观测远端字段数={}，已映射字段数={}，未映射字段数={}，映射配置样例=[{}]，观测映射样例=[{}]，未映射字段样例=[{}]",
                 syncTime,
                 stats.batchNo,
                 stats.dataType,
@@ -1599,6 +1651,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                 stats.inserted,
                 stats.updated,
                 stats.invalidated,
+                stats.conflict,
                 stats.failed,
                 stats.mappingConfigCount,
                 stats.observedRemoteFieldCount,
@@ -1611,7 +1664,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             return;
         }
         logger.warn(
-            "[主数据同步日志] 同步时间={}，批次号={}，数据类型={}({})，触发方式={}，同步模式={}，是否成功={}，失败原因={}，拉取={}，新增={}，更新={}，失效={}，失败={}，映射配置数={}，观测远端字段数={}，已映射字段数={}，未映射字段数={}，映射配置样例=[{}]，观测映射样例=[{}]，未映射字段样例=[{}]",
+            "[主数据同步日志] 同步时间={}，批次号={}，数据类型={}({})，触发方式={}，同步模式={}，是否成功={}，失败原因={}，拉取={}，新增={}，更新={}，失效={}，冲突={}，失败={}，映射配置数={}，观测远端字段数={}，已映射字段数={}，未映射字段数={}，映射配置样例=[{}]，观测映射样例=[{}]，未映射字段样例=[{}]",
             syncTime,
             stats.batchNo,
             stats.dataType,
@@ -1627,6 +1680,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             stats.inserted,
             stats.updated,
             stats.invalidated,
+            stats.conflict,
             stats.failed,
             stats.mappingConfigCount,
             stats.observedRemoteFieldCount,

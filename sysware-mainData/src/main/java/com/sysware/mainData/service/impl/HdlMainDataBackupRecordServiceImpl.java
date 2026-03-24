@@ -219,7 +219,7 @@ public class HdlMainDataBackupRecordServiceImpl implements IHdlMainDataBackupRec
             stats.enabledDataTypes = String.join(",", effectiveEnabledTypes);
             stats.disabledDataTypes = buildDisabledTypeSummary(effectiveEnabledTypes);
             if (StrUtil.isNotBlank(stats.disabledDataTypes)) {
-                stats.note("???????????????" + stats.disabledDataTypes);
+                stats.note("已按开关跳过以下数据类型：" + stats.disabledDataTypes);
             }
 
             BackupSnapshot snapshot = buildBackupSnapshot(effectiveEnabledTypes, stats);
@@ -238,11 +238,11 @@ public class HdlMainDataBackupRecordServiceImpl implements IHdlMainDataBackupRec
 
             int deletedCount = cleanupOldBackupFiles(backupDirectory, backupRetentionWeeks);
             if (deletedCount > 0) {
-                stats.note("??????? " + deletedCount + " ???????");
+                stats.note("已清理历史备份文件 " + deletedCount + " 个");
             }
         } catch (Exception e) {
-            logger.error("?????????", e);
-            stats.fail("execute backup failed: " + e.getMessage());
+            logger.error("执行主数据备份失败", e);
+            stats.fail("执行主数据备份失败：" + e.getMessage());
         }
         return finishAndPersist(stats);
     }
@@ -448,7 +448,7 @@ public class HdlMainDataBackupRecordServiceImpl implements IHdlMainDataBackupRec
         int tableCount = 0;
         List<String> backupTables = resolveBackupTables(enabledDataTypes);
         if (backupTables.size() == SHARED_BACKUP_TABLES.size() && stats != null && StrUtil.isNotBlank(stats.disabledDataTypes)) {
-            stats.note("????????????????????????");
+            stats.note("当前仅备份共享元数据表，业务数据表均因开关关闭被跳过");
         }
         for (String table : backupTables) {
             List<String> columns = queryTableColumns(table);

@@ -1,5 +1,6 @@
 package com.sysware.mainData.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.sysware.common.core.domain.R;
 import com.sysware.mainData.domain.bo.MainDataScheduleSwitchBo;
 import com.sysware.mainData.service.IMainDataScheduleSwitchService;
@@ -17,6 +18,7 @@ import java.util.Map;
  */
 @Validated
 @RestController
+@SaCheckLogin
 @RequiredArgsConstructor
 @RequestMapping("/mainData/scheduleSwitch")
 public class MainDataScheduleSwitchController {

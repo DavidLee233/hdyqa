@@ -1,5 +1,6 @@
 package com.sysware.mainData.controller;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.sysware.common.core.controller.BaseController;
 import com.sysware.common.core.domain.PageQuery;
 import com.sysware.common.core.domain.R;
@@ -23,6 +24,7 @@ import java.util.List;
  */
 @Validated
 @RestController
+@SaCheckLogin
 @RequiredArgsConstructor
 @RequestMapping("/mainData/syncBatch")
 public class HdlMainDataSyncBatchController extends BaseController {

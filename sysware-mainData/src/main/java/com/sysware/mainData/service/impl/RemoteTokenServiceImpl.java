@@ -124,7 +124,8 @@ public class RemoteTokenServiceImpl implements IRemoteTokenService {
                 ApiTokenResponse tokenResponse = response.getBody();
                 tokenResponse.setTimestamp(System.currentTimeMillis());
                 cachedToken = tokenResponse;
-                logger.info("获取远端接口令牌成功：{}", tokenResponse);
+                logger.info("获取远端接口令牌成功，租户={}，令牌摘要={}",
+                    tokenResponse.getTenantId(), maskToken(tokenResponse.getToken()));
                 return tokenResponse;
             }
 
@@ -206,5 +207,23 @@ public class RemoteTokenServiceImpl implements IRemoteTokenService {
         }
 
         return true;
+    }
+
+    /**
+     * @description 对令牌进行脱敏后输出到日志，避免敏感凭据完整暴露在日志中。
+     * @params token 远端接口访问令牌原文。
+     *
+     * @return String 令牌脱敏摘要（保留前后少量字符），用于日志排障定位。
+     * @author DavidLee233
+     * @date 2026/3/23
+     */
+    private String maskToken(String token) {
+        if (StringUtils.isEmpty(token)) {
+            return "null";
+        }
+        if (token.length() <= 10) {
+            return token.substring(0, 1) + "***";
+        }
+        return token.substring(0, 6) + "..." + token.substring(token.length() - 4);
     }
 }

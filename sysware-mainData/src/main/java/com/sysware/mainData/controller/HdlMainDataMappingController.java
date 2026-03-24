@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.core.bean.BeanUtil;
 import com.sysware.mainData.domain.HdlMainDataMapping;
 import com.sysware.mainData.domain.HdlOrganizationDepartment;
@@ -37,6 +38,7 @@ import com.sysware.common.core.page.TableDataInfo;
 @Validated
 @RequiredArgsConstructor
 @RestController
+@SaCheckLogin
 @RequestMapping("/mainData/mainDataMapping")
 public class HdlMainDataMappingController extends BaseController {
 

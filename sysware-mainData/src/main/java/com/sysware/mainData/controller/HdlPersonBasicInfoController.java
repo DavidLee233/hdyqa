@@ -1,39 +1,38 @@
 package com.sysware.mainData.controller;
 
-import java.util.List;
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-import java.util.HashMap;
-import java.util.Map;
-import java.io.OutputStream;
-
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.hutool.core.bean.BeanUtil;
-import com.sysware.mainData.domain.HdlOrganizationDepartment;
-import com.sysware.mainData.domain.HdlPersonBasicInfo;
-import com.sysware.mainData.domain.vo.HdlOrganizationDepartmentVo;
-import com.sysware.mainData.service.IRemoteDataService;
-import lombok.RequiredArgsConstructor;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.constraints.*;
-import cn.dev33.satoken.annotation.SaCheckPermission;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
-import com.sysware.common.annotation.RepeatSubmit;
 import com.sysware.common.annotation.Log;
+import com.sysware.common.annotation.RepeatSubmit;
 import com.sysware.common.core.controller.BaseController;
 import com.sysware.common.core.domain.PageQuery;
 import com.sysware.common.core.domain.R;
-import com.sysware.common.core.validate.AddGroup;
-import com.sysware.common.core.validate.EditGroup;
-import com.sysware.common.core.validate.QueryGroup;
-import com.sysware.common.enums.BusinessType;
-import com.sysware.common.utils.poi.ExcelUtil;
-import com.sysware.mainData.domain.vo.HdlPersonBasicInfoVo;
-import com.sysware.mainData.domain.bo.HdlPersonBasicInfoBo;
-import com.sysware.mainData.service.IHdlPersonBasicInfoService;
 import com.sysware.common.core.page.RemoteTableDataInfo;
 import com.sysware.common.core.page.TableDataInfo;
+import com.sysware.common.core.validate.AddGroup;
+import com.sysware.common.core.validate.EditGroup;
+import com.sysware.common.enums.BusinessType;
+import com.sysware.common.utils.poi.ExcelUtil;
+import com.sysware.mainData.controller.support.MainDataRemoteControllerSupport;
+import com.sysware.mainData.domain.HdlPersonBasicInfo;
+import com.sysware.mainData.domain.bo.HdlPersonBasicInfoBo;
+import com.sysware.mainData.domain.vo.HdlPersonBasicInfoVo;
+import com.sysware.mainData.service.IHdlPersonBasicInfoService;
+import com.sysware.mainData.service.IRemoteDataService;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 /**
  * @project npic
  * @description HdlPersonBasicInfoController控制器，负责员工基本信息主数据相关接口请求接收、参数处理与结果响应。
@@ -43,10 +42,14 @@ import com.sysware.common.core.page.TableDataInfo;
 @Validated
 @RequiredArgsConstructor
 @RestController
+@SaCheckLogin
 @RequestMapping("/mainData/personBasicInfo")
 public class HdlPersonBasicInfoController extends BaseController {
 
+    private static final Logger logger = LoggerFactory.getLogger(HdlPersonBasicInfoController.class);
+
     private final IHdlPersonBasicInfoService iHdlPersonBasicInfoService;
+
     @Autowired
     private IRemoteDataService remoteDataService;
     /**
@@ -143,32 +146,23 @@ public class HdlPersonBasicInfoController extends BaseController {
      */
     @PostMapping("/remote/list")
     public RemoteTableDataInfo listRemote(@RequestBody Map<String, Object> params) {
+        PageQuery pageQuery = MainDataRemoteControllerSupport.resolvePageQuery(params, 10);
+        Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
         try {
-            PageQuery pageQuery = new PageQuery();
-            int pageNum = params.get("pageNum") != null
-                ? Integer.parseInt(params.get("pageNum").toString()) : 1;
-            int pageSize = params.get("pageSize") != null
-                ? Integer.parseInt(params.get("pageSize").toString()) : 10;
-            pageQuery.setPageNum(pageNum);
-            pageQuery.setPageSize(pageSize);
-
             Map<String, Object> queryParams = new HashMap<>();
-            if (params.get("name") != null) queryParams.put("name", params.get("name"));
-            if (params.get("code") != null) queryParams.put("code", params.get("code"));
-            if (params.get("mobile") != null) queryParams.put("mobile", params.get("mobile"));
-            if (params.get("searchValue") != null && !params.get("searchValue").toString().isEmpty()) {
-                queryParams.put("searchValue", params.get("searchValue"));
+            if (safeParams.get("name") != null) queryParams.put("name", safeParams.get("name"));
+            if (safeParams.get("code") != null) queryParams.put("code", safeParams.get("code"));
+            if (safeParams.get("mobile") != null) queryParams.put("mobile", safeParams.get("mobile"));
+            if (safeParams.get("searchValue") != null && !safeParams.get("searchValue").toString().isEmpty()) {
+                queryParams.put("searchValue", safeParams.get("searchValue"));
             }
-            queryParams.put("pageNum", pageNum - 1);
-            queryParams.put("pageSize", pageSize);
-
+            queryParams.put("pageNum", pageQuery.getPageNum() - 1);
+            queryParams.put("pageSize", pageQuery.getPageSize());
             Map<String, Object> result = remoteDataService.queryRemotePersonBasicInfos(queryParams);
-            List<?> rows = (List<?>) result.get("rows");
-            long total = result.get("total") != null
-                ? Long.parseLong(result.get("total").toString()) : 0L;
-            return RemoteTableDataInfo.build(rows, total, pageQuery);
+            return MainDataRemoteControllerSupport.buildRemoteSuccess(result, pageQuery);
         } catch (Exception e) {
-            return RemoteTableDataInfo.build(null, 0L, new PageQuery());
+            logger.error("查询远端员工基本信息失败，参数={}", safeParams, e);
+            return MainDataRemoteControllerSupport.buildRemoteError(pageQuery, "查询远端员工基本信息失败", e);
         }
     }
     /**
@@ -181,21 +175,15 @@ public class HdlPersonBasicInfoController extends BaseController {
      * @date 2026/3/20
      */
     @PostMapping({"/remote/export", "/exportRemote"})
-    public void exportRemote(@RequestParam Map<String, Object> params, HttpServletResponse response) {
+    public void exportRemote(@RequestParam(required = false) Map<String, String> params,
+                             @RequestBody(required = false) Map<String, Object> body,
+                             HttpServletResponse response) {
         try {
-            Map<String, Object> queryParams = new HashMap<>(params);
-            queryParams.put("pageNum", 0);
-            queryParams.put("pageSize", 10000);
+            Map<String, Object> queryParams = MainDataRemoteControllerSupport.mergeExportParams(params, body, 0, 10000);
             byte[] data = remoteDataService.exportRemotePersonBasicInfos(queryParams);
-            response.setContentType("application/vnd.ms-excel");
-            response.setCharacterEncoding("utf-8");
-            response.setHeader("Content-disposition",
-                "attachment;filename=remote_person_basic_" + System.currentTimeMillis() + ".xlsx");
-            try (OutputStream os = response.getOutputStream()) {
-                os.write(data == null ? new byte[0] : data);
-                os.flush();
-            }
+            MainDataRemoteControllerSupport.writeExcelResponse(response, data, "remote_person_basic_info");
         } catch (Exception e) {
+            logger.error("导出远端员工基本信息失败，参数={}，请求体={}", params, body, e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
@@ -210,78 +198,15 @@ public class HdlPersonBasicInfoController extends BaseController {
     @PostMapping("/remote/forceSync")
     public R<Map<String, Object>> forceSyncRemote(@RequestBody(required = false) Map<String, Object> body) {
         try {
-            String syncMode = resolveSyncMode(body);
+            String syncMode = MainDataRemoteControllerSupport.resolveSyncMode(body);
             Map<String, Object> result = remoteDataService.forceSyncPersonBasicInfos(syncMode, "manual");
-            if (isSyncSuccess(result)) {
+            if (MainDataRemoteControllerSupport.isSyncSuccess(result)) {
                 return R.ok(result);
             }
-            String message = resolveSyncFailureMessage(result, "强制同步员工基本信息失败");
+            String message = MainDataRemoteControllerSupport.resolveSyncFailureMessage(result, "强制同步员工基本信息失败");
             return R.fail(message, result);
         } catch (Exception e) {
             return R.fail("强制同步员工基本信息失败: " + e.getMessage());
         }
-    }
-
-    /**
-     * @description 判定同步结果是否成功，用于统一接口返回状态。
-     * @params result 执行结果对象（包含成功标记、统计数据与错误信息）
-     *
-      * @return boolean 状态判定结果（true表示满足条件，false表示不满足）。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
-    private boolean isSyncSuccess(Map<String, Object> result) {
-        if (result == null) {
-            return false;
-        }
-        Object success = result.get("success");
-        if (success == null) {
-            return false;
-        }
-        if (success instanceof Boolean) {
-            return (Boolean) success;
-        }
-        String normalized = String.valueOf(success).trim().toLowerCase();
-        return "1".equals(normalized) || "true".equals(normalized);
-    }
-
-    /**
-     * @description 解析同步失败原因并转换为前端可展示错误信息。
-     * @params result 执行结果对象（包含成功标记、统计数据与错误信息）
-     * @params fallback 失败兜底提示文案
-     *
-      * @return String 面向调用方的业务提示信息。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
-    private String resolveSyncFailureMessage(Map<String, Object> result, String fallback) {
-        if (result == null) {
-            return fallback;
-        }
-        Object message = result.get("message");
-        if (message == null) {
-            return fallback;
-        }
-        String text = String.valueOf(message).trim();
-        return text.isEmpty() ? fallback : text;
-    }
-
-    /**
-     * @description 解析请求中的同步模式参数并标准化为全量或增量。
-     * @params body 请求体参数集合（承载过滤条件、映射字段与同步配置）
-     *
-      * @return String 解析后的业务字符串结果。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
-    private String resolveSyncMode(Map<String, Object> body) {
-        if (body == null || body.get("syncMode") == null) {
-            return "full";
-        }
-        String value = String.valueOf(body.get("syncMode")).trim().toLowerCase();
-        if ("incremental".equals(value) || "auto".equals(value)) {
-            return value;
-        }
-        return "full";
     }
 }
