@@ -23,12 +23,6 @@ import org.springframework.web.client.RestTemplate;
 import javax.annotation.PostConstruct;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * @project npic
- * @description RemoteTokenServiceImpl服务实现类，负责远端访问令牌业务规则执行、数据处理与流程编排。
- * @author DavidLee233
- * @date 2026/3/20
- */
 @RequiredArgsConstructor
 @Service
 public class RemoteTokenServiceImpl implements IRemoteTokenService {
@@ -41,69 +35,38 @@ public class RemoteTokenServiceImpl implements IRemoteTokenService {
     @Autowired
     private RestTemplate restTemplate;
 
-    // Token cache
     private ApiTokenResponse cachedToken;
 
-    // Lock for thread-safe refresh
     private final ReentrantLock lock = new ReentrantLock();
-    /**
-     * @description 执行init方法，完成远端访问令牌相关业务处理。
-     * @params 无
-     *
-      * @return void 无返回值，方法执行后通过副作用更新系统状态。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
+
     @PostConstruct
     public void init() {
         ApiTokenResponse initToken = refreshTokenInternal(true);
         if (initToken != null) {
-            logger.info("远端接口令牌初始化成功。");
+            logger.info("Remote API token initialized.");
         }
     }
-    /**
-     * @description 获取远端访问令牌相关信息并返回调用方。
-     * @params 无
-     *
-      * @return String 字符串类型业务结果。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
+
     @Override
     public String getValidToken() {
         if (!isTokenValid()) {
-            logger.info("令牌缺失或已过期，开始刷新令牌。");
+            logger.info("Remote token missing or expired, refreshing token.");
             refreshToken();
         }
         return cachedToken != null ? cachedToken.getToken() : null;
     }
-    /**
-     * @description 主动刷新远端访问令牌并返回最新令牌信息。
-     * @params 无
-     *
-      * @return ApiTokenResponse 远端令牌响应相关业务结果。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
+
     @Override
     public ApiTokenResponse refreshToken() {
         return refreshTokenInternal(false);
     }
 
-    /**
-     * @description 执行refreshTokenInternal方法，完成远端访问令牌相关业务处理。
-     * @params startupMode 启动模式标记（用于决定是否启用本地调度）
-     *
-      * @return ApiTokenResponse 远端令牌响应相关业务结果。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
     private ApiTokenResponse refreshTokenInternal(boolean startupMode) {
         lock.lock();
         try {
-            logger.info("开始获取远端接口令牌。");
+            logger.info("Start requesting remote API token.");
 
-            String url = remoteDataConfig.getApiUrl() + "/api/users/login";
+            String url = remoteDataConfig.buildRemoteUrl(remoteDataConfig.getLoginPath());
 
             ApiTokenRequest request = new ApiTokenRequest();
             request.setUsername(remoteDataConfig.getUsername());
@@ -124,12 +87,12 @@ public class RemoteTokenServiceImpl implements IRemoteTokenService {
                 ApiTokenResponse tokenResponse = response.getBody();
                 tokenResponse.setTimestamp(System.currentTimeMillis());
                 cachedToken = tokenResponse;
-                logger.info("获取远端接口令牌成功，租户={}，令牌摘要={}",
+                logger.info("Remote API token acquired, tenantId={}, token={}",
                     tokenResponse.getTenantId(), maskToken(tokenResponse.getToken()));
                 return tokenResponse;
             }
 
-            String message = "获取远端接口令牌失败，状态码：" + response.getStatusCode();
+            String message = "Failed to get remote API token, status=" + response.getStatusCode();
             if (startupMode) {
                 logger.warn(message);
                 return null;
@@ -139,51 +102,37 @@ public class RemoteTokenServiceImpl implements IRemoteTokenService {
 
         } catch (HttpClientErrorException e) {
             if (startupMode) {
-                logger.warn("启动阶段获取令牌失败（状态码{}），响应：{}",
+                logger.warn("Startup token fetch failed, status={}, body={}",
                     e.getStatusCode(), e.getResponseBodyAsString());
                 return null;
             }
-            logger.error("获取远端接口令牌请求错误，状态码{}，响应：{}",
+            logger.error("Token request failed, status={}, body={}",
                 e.getStatusCode(), e.getResponseBodyAsString(), e);
-            throw new RuntimeException("获取远端接口令牌请求错误：" + e.getStatusCode(), e);
+            throw new RuntimeException("Token request failed, status=" + e.getStatusCode(), e);
         } catch (ResourceAccessException e) {
             if (startupMode) {
-                logger.warn("启动阶段获取令牌失败，无法连接远端接口：{}", e.getMessage());
+                logger.warn("Startup token fetch failed, cannot connect remote API: {}", e.getMessage());
                 return null;
             }
-            logger.error("远端接口连接失败：{}", e.getMessage(), e);
-            throw new RuntimeException("远端接口连接失败：" + e.getMessage(), e);
+            logger.error("Remote API connection failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Remote API connection failed: " + e.getMessage(), e);
         } catch (Exception e) {
             if (startupMode) {
-                logger.warn("启动阶段获取令牌失败：{}", e.getMessage());
+                logger.warn("Startup token fetch failed: {}", e.getMessage());
                 return null;
             }
-            logger.error("获取远端接口令牌异常", e);
-            throw new RuntimeException("获取远端接口令牌异常: " + e.getMessage(), e);
+            logger.error("Unexpected error when requesting remote token", e);
+            throw new RuntimeException("Unexpected error when requesting remote token: " + e.getMessage(), e);
         } finally {
             lock.unlock();
         }
     }
-    /**
-     * @description 获取远端访问令牌相关信息并返回调用方。
-     * @params 无
-     *
-      * @return ApiTokenResponse 远端令牌响应相关业务结果。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
+
     @Override
     public ApiTokenResponse getCurrentTokenInfo() {
         return cachedToken;
     }
-    /**
-     * @description 判断远端访问令牌业务状态是否满足预设条件。
-     * @params 无
-     *
-      * @return boolean 状态判定结果（true表示满足条件，false表示不满足）。
-     * @author DavidLee233
-     * @date 2026/3/20
-     */
+
     @Override
     public boolean isTokenValid() {
         if (cachedToken == null || StringUtils.isEmpty(cachedToken.getToken())) {
@@ -197,26 +146,18 @@ public class RemoteTokenServiceImpl implements IRemoteTokenService {
         long refreshTime = remoteDataConfig.getTokenRefreshTime();
 
         if (tokenAge > expireTime) {
-            logger.warn("令牌已过期，存活时长={}毫秒，过期阈值={}毫秒", tokenAge, expireTime);
+            logger.warn("Token expired, age={}ms, expireThreshold={}ms", tokenAge, expireTime);
             return false;
         }
 
         if (tokenAge > refreshTime) {
-            logger.info("令牌接近过期，存活时长={}毫秒，刷新阈值={}毫秒", tokenAge, refreshTime);
+            logger.info("Token near expiry, age={}ms, refreshThreshold={}ms", tokenAge, refreshTime);
             return false;
         }
 
         return true;
     }
 
-    /**
-     * @description 对令牌进行脱敏后输出到日志，避免敏感凭据完整暴露在日志中。
-     * @params token 远端接口访问令牌原文。
-     *
-     * @return String 令牌脱敏摘要（保留前后少量字符），用于日志排障定位。
-     * @author DavidLee233
-     * @date 2026/3/23
-     */
     private String maskToken(String token) {
         if (StringUtils.isEmpty(token)) {
             return "null";

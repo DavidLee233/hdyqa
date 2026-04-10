@@ -450,6 +450,75 @@ CREATE TABLE `hdl_main_data_backup_record`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
+-- Table structure for hdl_main_data_downstream_system
+-- ----------------------------
+DROP TABLE IF EXISTS `hdl_main_data_downstream_system`;
+CREATE TABLE `hdl_main_data_downstream_system`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `system_name` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '下游系统名称',
+  `system_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '下游系统IP',
+  `system_port` int(0) NULL DEFAULT 80 COMMENT '下游系统端口',
+  `last_connect_status` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '0' COMMENT '最近连接状态（1已连接，0未连接）',
+  `last_check_time` datetime(0) NULL DEFAULT NULL COMMENT '最近检测时间',
+  `last_check_message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最近检测信息',
+  `create_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_mdds_system_ip`(`system_ip`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for hdl_main_data_downstream_log
+-- ----------------------------
+DROP TABLE IF EXISTS `hdl_main_data_downstream_log`;
+CREATE TABLE `hdl_main_data_downstream_log`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `downstream_system_id` bigint(0) NULL DEFAULT NULL COMMENT '下游系统主键',
+  `downstream_system_name` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '下游系统名称',
+  `downstream_system_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '下游系统IP',
+  `request_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '下游调用URL',
+  `data_type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '主数据类型（1/2/3）',
+  `data_type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '主数据类型名称',
+  `sync_time` datetime(0) NULL DEFAULT NULL COMMENT '同步时间',
+  `success` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '是否成功（1成功，0失败）',
+  `record_count` int(0) NULL DEFAULT 0 COMMENT '记录数量',
+  `duration_ms` bigint(0) NULL DEFAULT 0 COMMENT '耗时毫秒',
+  `message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '调用结果信息',
+  `create_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_mddl_system_time`(`downstream_system_id`, `sync_time`) USING BTREE,
+  KEY `idx_mddl_data_type_time`(`data_type`, `sync_time`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for hdl_main_data_remote_api_log
+-- ----------------------------
+DROP TABLE IF EXISTS `hdl_main_data_remote_api_log`;
+CREATE TABLE `hdl_main_data_remote_api_log`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `request_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '远端调用URL',
+  `data_type` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '主数据类型（1/2/3）',
+  `data_type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '主数据类型名称',
+  `call_source` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '调用来源（sync/query/export）',
+  `sync_time` datetime(0) NULL DEFAULT NULL COMMENT '调用时间',
+  `success` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '是否成功（1成功，0失败）',
+  `record_count` int(0) NULL DEFAULT 0 COMMENT '记录数量',
+  `duration_ms` bigint(0) NULL DEFAULT 0 COMMENT '耗时毫秒',
+  `message` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '调用结果信息',
+  `create_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建者',
+  `create_time` datetime(0) NULL DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(40) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '更新者',
+  `update_time` datetime(0) NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_mdral_type_source_time`(`data_type`, `call_source`, `sync_time`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for hdl_organization_department
 -- ----------------------------
 DROP TABLE IF EXISTS `hdl_organization_department`;

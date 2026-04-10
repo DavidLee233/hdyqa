@@ -16,6 +16,8 @@ import com.sysware.mainData.domain.vo.HdlPersonJobInfoVo;
 import com.sysware.mainData.mapper.HdlOrganizationDepartmentMapper;
 import com.sysware.mainData.mapper.HdlPersonBasicInfoMapper;
 import com.sysware.mainData.mapper.HdlPersonJobInfoMapper;
+import com.sysware.mainData.service.IMainDataConnectivityService;
+import com.sysware.common.utils.ServletUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -41,10 +44,14 @@ import java.util.List;
 public class MainDataDownstreamController {
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String TYPE_ORG_DEPT = "1";
+    private static final String TYPE_PERSON_BASIC = "2";
+    private static final String TYPE_PERSON_JOB = "3";
 
     private final HdlOrganizationDepartmentMapper organizationDepartmentMapper;
     private final HdlPersonBasicInfoMapper personBasicInfoMapper;
     private final HdlPersonJobInfoMapper personJobInfoMapper;
+    private final IMainDataConnectivityService connectivityService;
     /**
      * @description 执行pullOrganizationDepartment方法，完成下游主数据接口相关业务处理。
      * @params request 下游系统拉取请求对象（包含分页、时间水位等过滤条件）
@@ -55,33 +62,55 @@ public class MainDataDownstreamController {
      */
     @PostMapping("/organizationDepartment/pull")
     public R<TableDataInfo<HdlOrganizationDepartmentVo>> pullOrganizationDepartment(
-                                                                                    @RequestBody(required = false) DownstreamPullRequest request) {
+                                                                                    @RequestBody(required = false) DownstreamPullRequest request,
+                                                                                    HttpServletRequest httpServletRequest) {
+        long startAt = System.currentTimeMillis();
+        boolean success = false;
+        long recordCount = 0L;
+        String message = "success";
         DownstreamPullRequest req = normalizeRequest(request);
         LambdaQueryWrapper<HdlOrganizationDepartment> lqw = new LambdaQueryWrapper<>();
 
-        if (!Boolean.TRUE.equals(req.getIncludeInvalid())) {
-            lqw.and(w -> w.ne(HdlOrganizationDepartment::getEnableState, "3")
-                .or()
-                .isNull(HdlOrganizationDepartment::getEnableState));
-        }
-        if (StrUtil.isNotBlank(req.getName())) {
-            lqw.like(HdlOrganizationDepartment::getName, req.getName());
-        }
-        if (StrUtil.isNotBlank(req.getCode())) {
-            lqw.like(HdlOrganizationDepartment::getCode, req.getCode());
-        }
-        if (StrUtil.isNotBlank(req.getShortName())) {
-            lqw.like(HdlOrganizationDepartment::getShortName, req.getShortName());
-        }
-        if (StrUtil.isNotBlank(req.getSign())) {
-            lqw.like(HdlOrganizationDepartment::getSign, req.getSign());
-        }
-        applyUpdatedAfter(lqw, req.getUpdatedAfter());
-        lqw.orderByDesc(HdlOrganizationDepartment::getUpdateTime, HdlOrganizationDepartment::getCreateTime);
+        try {
+            if (!Boolean.TRUE.equals(req.getIncludeInvalid())) {
+                lqw.and(w -> w.ne(HdlOrganizationDepartment::getEnableState, "3")
+                    .or()
+                    .isNull(HdlOrganizationDepartment::getEnableState));
+            }
+            if (StrUtil.isNotBlank(req.getName())) {
+                lqw.like(HdlOrganizationDepartment::getName, req.getName());
+            }
+            if (StrUtil.isNotBlank(req.getCode())) {
+                lqw.like(HdlOrganizationDepartment::getCode, req.getCode());
+            }
+            if (StrUtil.isNotBlank(req.getShortName())) {
+                lqw.like(HdlOrganizationDepartment::getShortName, req.getShortName());
+            }
+            if (StrUtil.isNotBlank(req.getSign())) {
+                lqw.like(HdlOrganizationDepartment::getSign, req.getSign());
+            }
+            applyUpdatedAfter(lqw, req.getUpdatedAfter());
+            lqw.orderByDesc(HdlOrganizationDepartment::getUpdateTime, HdlOrganizationDepartment::getCreateTime);
 
-        Page<HdlOrganizationDepartment> page = organizationDepartmentMapper.selectPage(
-            new Page<>(req.getPageNum(), req.getPageSize()), lqw);
-        return R.ok(buildPageResult(convertOrganizationDepartmentVo(page.getRecords()), page.getTotal()));
+            Page<HdlOrganizationDepartment> page = organizationDepartmentMapper.selectPage(
+                new Page<>(req.getPageNum(), req.getPageSize()), lqw);
+            success = true;
+            recordCount = page.getTotal();
+            return R.ok(buildPageResult(convertOrganizationDepartmentVo(page.getRecords()), page.getTotal()));
+        } catch (Exception e) {
+            message = e.getMessage();
+            throw e;
+        } finally {
+            connectivityService.recordDownstreamPull(
+                ServletUtils.getFullUrl(httpServletRequest),
+                TYPE_ORG_DEPT,
+                success,
+                recordCount,
+                System.currentTimeMillis() - startAt,
+                message,
+                ServletUtils.getClientIP(httpServletRequest)
+            );
+        }
     }
     /**
      * @description 执行pullPersonBasicInfo方法，完成下游主数据接口相关业务处理。
@@ -93,33 +122,55 @@ public class MainDataDownstreamController {
      */
     @PostMapping("/personBasicInfo/pull")
     public R<TableDataInfo<HdlPersonBasicInfoVo>> pullPersonBasicInfo(
-                                                                      @RequestBody(required = false) DownstreamPullRequest request) {
+                                                                      @RequestBody(required = false) DownstreamPullRequest request,
+                                                                      HttpServletRequest httpServletRequest) {
+        long startAt = System.currentTimeMillis();
+        boolean success = false;
+        long recordCount = 0L;
+        String message = "success";
         DownstreamPullRequest req = normalizeRequest(request);
         LambdaQueryWrapper<HdlPersonBasicInfo> lqw = new LambdaQueryWrapper<>();
 
-        if (!Boolean.TRUE.equals(req.getIncludeInvalid())) {
-            lqw.and(w -> w.ne(HdlPersonBasicInfo::getEnableState, "3")
-                .or()
-                .isNull(HdlPersonBasicInfo::getEnableState));
-        }
-        if (StrUtil.isNotBlank(req.getName())) {
-            lqw.like(HdlPersonBasicInfo::getName, req.getName());
-        }
-        if (StrUtil.isNotBlank(req.getCode())) {
-            lqw.like(HdlPersonBasicInfo::getCode, req.getCode());
-        }
-        if (StrUtil.isNotBlank(req.getMobile())) {
-            lqw.like(HdlPersonBasicInfo::getMobile, req.getMobile());
-        }
-        if (StrUtil.isNotBlank(req.getIdNumber())) {
-            lqw.like(HdlPersonBasicInfo::getIdNumber, req.getIdNumber());
-        }
-        applyUpdatedAfter(lqw, req.getUpdatedAfter());
-        lqw.orderByDesc(HdlPersonBasicInfo::getUpdateTime, HdlPersonBasicInfo::getCreateTime);
+        try {
+            if (!Boolean.TRUE.equals(req.getIncludeInvalid())) {
+                lqw.and(w -> w.ne(HdlPersonBasicInfo::getEnableState, "3")
+                    .or()
+                    .isNull(HdlPersonBasicInfo::getEnableState));
+            }
+            if (StrUtil.isNotBlank(req.getName())) {
+                lqw.like(HdlPersonBasicInfo::getName, req.getName());
+            }
+            if (StrUtil.isNotBlank(req.getCode())) {
+                lqw.like(HdlPersonBasicInfo::getCode, req.getCode());
+            }
+            if (StrUtil.isNotBlank(req.getMobile())) {
+                lqw.like(HdlPersonBasicInfo::getMobile, req.getMobile());
+            }
+            if (StrUtil.isNotBlank(req.getIdNumber())) {
+                lqw.like(HdlPersonBasicInfo::getIdNumber, req.getIdNumber());
+            }
+            applyUpdatedAfter(lqw, req.getUpdatedAfter());
+            lqw.orderByDesc(HdlPersonBasicInfo::getUpdateTime, HdlPersonBasicInfo::getCreateTime);
 
-        Page<HdlPersonBasicInfo> page = personBasicInfoMapper.selectPage(
-            new Page<>(req.getPageNum(), req.getPageSize()), lqw);
-        return R.ok(buildPageResult(convertPersonBasicInfoVo(page.getRecords()), page.getTotal()));
+            Page<HdlPersonBasicInfo> page = personBasicInfoMapper.selectPage(
+                new Page<>(req.getPageNum(), req.getPageSize()), lqw);
+            success = true;
+            recordCount = page.getTotal();
+            return R.ok(buildPageResult(convertPersonBasicInfoVo(page.getRecords()), page.getTotal()));
+        } catch (Exception e) {
+            message = e.getMessage();
+            throw e;
+        } finally {
+            connectivityService.recordDownstreamPull(
+                ServletUtils.getFullUrl(httpServletRequest),
+                TYPE_PERSON_BASIC,
+                success,
+                recordCount,
+                System.currentTimeMillis() - startAt,
+                message,
+                ServletUtils.getClientIP(httpServletRequest)
+            );
+        }
     }
     /**
      * @description 执行pullPersonJobInfo方法，完成下游主数据接口相关业务处理。
@@ -131,33 +182,55 @@ public class MainDataDownstreamController {
      */
     @PostMapping("/personJobInfo/pull")
     public R<TableDataInfo<HdlPersonJobInfoVo>> pullPersonJobInfo(
-                                                                  @RequestBody(required = false) DownstreamPullRequest request) {
+                                                                  @RequestBody(required = false) DownstreamPullRequest request,
+                                                                  HttpServletRequest httpServletRequest) {
+        long startAt = System.currentTimeMillis();
+        boolean success = false;
+        long recordCount = 0L;
+        String message = "success";
         DownstreamPullRequest req = normalizeRequest(request);
         LambdaQueryWrapper<HdlPersonJobInfo> lqw = new LambdaQueryWrapper<>();
 
-        if (!Boolean.TRUE.equals(req.getIncludeInvalid())) {
-            lqw.and(w -> w.ne(HdlPersonJobInfo::getEndFlag, "Y")
-                .or()
-                .isNull(HdlPersonJobInfo::getEndFlag));
-        }
-        if (StrUtil.isNotBlank(req.getName())) {
-            lqw.like(HdlPersonJobInfo::getName, req.getName());
-        }
-        if (StrUtil.isNotBlank(req.getCode())) {
-            lqw.like(HdlPersonJobInfo::getCode, req.getCode());
-        }
-        if (StrUtil.isNotBlank(req.getKeyNumber())) {
-            lqw.like(HdlPersonJobInfo::getKeyNumber, req.getKeyNumber());
-        }
-        if (StrUtil.isNotBlank(req.getIdNumber())) {
-            lqw.like(HdlPersonJobInfo::getIdNumber, req.getIdNumber());
-        }
-        applyUpdatedAfter(lqw, req.getUpdatedAfter());
-        lqw.orderByDesc(HdlPersonJobInfo::getUpdateTime, HdlPersonJobInfo::getCreateTime);
+        try {
+            if (!Boolean.TRUE.equals(req.getIncludeInvalid())) {
+                lqw.and(w -> w.ne(HdlPersonJobInfo::getEndFlag, "Y")
+                    .or()
+                    .isNull(HdlPersonJobInfo::getEndFlag));
+            }
+            if (StrUtil.isNotBlank(req.getName())) {
+                lqw.like(HdlPersonJobInfo::getName, req.getName());
+            }
+            if (StrUtil.isNotBlank(req.getCode())) {
+                lqw.like(HdlPersonJobInfo::getCode, req.getCode());
+            }
+            if (StrUtil.isNotBlank(req.getKeyNumber())) {
+                lqw.like(HdlPersonJobInfo::getKeyNumber, req.getKeyNumber());
+            }
+            if (StrUtil.isNotBlank(req.getIdNumber())) {
+                lqw.like(HdlPersonJobInfo::getIdNumber, req.getIdNumber());
+            }
+            applyUpdatedAfter(lqw, req.getUpdatedAfter());
+            lqw.orderByDesc(HdlPersonJobInfo::getUpdateTime, HdlPersonJobInfo::getCreateTime);
 
-        Page<HdlPersonJobInfo> page = personJobInfoMapper.selectPage(
-            new Page<>(req.getPageNum(), req.getPageSize()), lqw);
-        return R.ok(buildPageResult(convertPersonJobInfoVo(page.getRecords()), page.getTotal()));
+            Page<HdlPersonJobInfo> page = personJobInfoMapper.selectPage(
+                new Page<>(req.getPageNum(), req.getPageSize()), lqw);
+            success = true;
+            recordCount = page.getTotal();
+            return R.ok(buildPageResult(convertPersonJobInfoVo(page.getRecords()), page.getTotal()));
+        } catch (Exception e) {
+            message = e.getMessage();
+            throw e;
+        } finally {
+            connectivityService.recordDownstreamPull(
+                ServletUtils.getFullUrl(httpServletRequest),
+                TYPE_PERSON_JOB,
+                success,
+                recordCount,
+                System.currentTimeMillis() - startAt,
+                message,
+                ServletUtils.getClientIP(httpServletRequest)
+            );
+        }
     }
 
     /**

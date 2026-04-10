@@ -9,8 +9,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.filter.CharacterEncodingFilter;
 
 import javax.servlet.DispatcherType;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,6 +29,21 @@ public class FilterConfig {
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Bean
+    public FilterRegistrationBean characterEncodingFilterRegistration() {
+        FilterRegistrationBean registration = new FilterRegistrationBean();
+        CharacterEncodingFilter filter = new CharacterEncodingFilter();
+        filter.setEncoding(StandardCharsets.UTF_8.name());
+        filter.setForceRequestEncoding(true);
+        filter.setForceResponseEncoding(true);
+        registration.setFilter(filter);
+        registration.addUrlPatterns("/*");
+        registration.setName("characterEncodingFilter");
+        registration.setOrder(FilterRegistrationBean.HIGHEST_PRECEDENCE);
+        return registration;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Bean
     @ConditionalOnProperty(value = "xss.enabled", havingValue = "true")
     public FilterRegistrationBean xssFilterRegistration() {
         FilterRegistrationBean registration = new FilterRegistrationBean();
@@ -34,7 +51,7 @@ public class FilterConfig {
         registration.setFilter(new XssFilter());
         registration.addUrlPatterns(StringUtils.split(xssProperties.getUrlPatterns(), StringUtils.SEPARATOR));
         registration.setName("xssFilter");
-        registration.setOrder(FilterRegistrationBean.HIGHEST_PRECEDENCE);
+        registration.setOrder(FilterRegistrationBean.HIGHEST_PRECEDENCE + 1);
         Map<String, String> initParameters = new HashMap<String, String>();
         initParameters.put("excludes", xssProperties.getExcludes());
         registration.setInitParameters(initParameters);

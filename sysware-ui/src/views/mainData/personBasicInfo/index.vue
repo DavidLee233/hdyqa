@@ -101,6 +101,17 @@
           :loading="exportLoading"
         >导出</el-button>
       </el-col>
+      <el-col v-if="dataSource === 'local'" :span="1.8">
+        <el-button
+          type="primary"
+          plain
+          icon="el-icon-connection"
+          size="mini"
+          @click="openDownstreamConnectivityDialog"
+        >
+          连接检测
+        </el-button>
+      </el-col>
       <el-col v-if="dataSource === 'local'" :span="2.4">
         <div class="schedule-switch-box">
           <span class="schedule-switch-text">{{ backupSwitchLabel }}</span>
@@ -130,6 +141,29 @@
           </el-dropdown-menu>
         </el-dropdown>
       </el-col>
+      <el-col v-if="dataSource === 'remote'" :span="1.8">
+        <el-button
+          class="remote-status-btn"
+          plain
+          size="mini"
+          :loading="remoteConnectivityLoading"
+          @click="handleRemoteConnectivityClick"
+        >
+          <i class="remote-status-dot" :class="remoteConnectivityDotClass()"></i>
+          连接检测灯
+        </el-button>
+      </el-col>
+      <el-col v-if="dataSource === 'remote'" :span="1.8">
+        <el-button
+          type="primary"
+          plain
+          icon="el-icon-tickets"
+          size="mini"
+          @click="openRemoteSyncLogDialog"
+        >
+          同步日志
+        </el-button>
+      </el-col>
       <el-col v-if="dataSource === 'remote'" :span="2.4">
         <div class="schedule-switch-box">
           <span class="schedule-switch-text">{{ syncSwitchLabel }}</span>
@@ -154,6 +188,10 @@
         show-icon>
         <span>当前查看的是院主数据，数据来源于远程数据库(139.10.2.90)，此处为只读模式。</span>
       </el-alert>
+      <div v-if="remotePreCheckLoading" class="remote-precheck-tip">
+        <i class="el-icon-loading"></i>
+        <span>{{ remotePreCheckText }}</span>
+      </div>
       <div class="remote-sync-meta">最近同步：{{ getLatestSyncSummary() }}</div>
     </div>
 
@@ -258,6 +296,15 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
+
+    <downstream-connectivity-dialog
+      ref="downstreamConnectivityDialog"
+      :data-type="dataTypeCode"
+    />
+    <remote-sync-log-dialog
+      ref="remoteSyncLogDialog"
+      :data-type="dataTypeCode"
+    />
   </div>
 </template>
 
@@ -275,9 +322,16 @@ import {getUser} from "@/api/qaSystem/qaCommon";
 import {getFieldMappingByType} from "@/api/mainData/mainDataMapping";
 import { listLatestMainDataSyncBatch } from "@/api/mainData/syncBatch";
 import { getMainDataScheduleSwitchStatus, updateMainDataScheduleSwitch } from "@/api/mainData/scheduleSwitch";
+import { checkRemoteConnectivity as apiCheckRemoteConnectivity } from "@/api/mainData/connectivity";
+import DownstreamConnectivityDialog from "@/views/mainData/components/DownstreamConnectivityDialog.vue";
+import RemoteSyncLogDialog from "@/views/mainData/components/RemoteSyncLogDialog.vue";
 
 export default {
   name: "PersonBasicInfo",
+  components: {
+    DownstreamConnectivityDialog,
+    RemoteSyncLogDialog
+  },
   data() {
     return {
       userName: null,
@@ -389,6 +443,11 @@ export default {
       dataTypeName: '员工基本信息',
       backupSwitchLabel: '定时备份',
       syncSwitchLabel: '定时同步',
+      remotePreCheckLoading: false,
+      remotePreCheckText: '连接检测中，请稍候...',
+      remoteConnectivityLoading: false,
+      remoteConnectivityStatus: '0',
+      remoteConnectivityMessage: '',
     };
   },
 
@@ -463,6 +522,50 @@ export default {
       });
     },
 
+    openDownstreamConnectivityDialog() {
+      this.$refs.downstreamConnectivityDialog.open();
+    },
+
+    openRemoteSyncLogDialog() {
+      this.$refs.remoteSyncLogDialog.open();
+    },
+
+    handleRemoteConnectivityClick() {
+      this.checkRemoteConnectivity(true);
+    },
+
+    remoteConnectivityDotClass() {
+      return this.remoteConnectivityStatus === '1' ? 'remote-status-ok' : 'remote-status-fail';
+    },
+
+    checkRemoteConnectivity(showMessage) {
+      this.remoteConnectivityLoading = true;
+      return apiCheckRemoteConnectivity().then(response => {
+        const data = response.data || {};
+        this.remoteConnectivityStatus = String(data.status || '0');
+        this.remoteConnectivityMessage = data.message || '';
+        if (showMessage) {
+          const messageText = this.remoteConnectivityMessage || '院主数据连接检测失败';
+          if (this.remoteConnectivityStatus === '1') {
+            this.$message.success(messageText);
+          } else {
+            this.$message.error(messageText);
+          }
+        }
+        return this.remoteConnectivityStatus === '1';
+      }).catch(error => {
+        console.error('检测远端主数据连接失败', error);
+        this.remoteConnectivityStatus = '0';
+        this.remoteConnectivityMessage = '检测请求失败';
+        if (showMessage) {
+          this.$message.error('远端主数据连接检测失败');
+        }
+        return false;
+      }).finally(() => {
+        this.remoteConnectivityLoading = false;
+      });
+    },
+
     /** 将查询参数转换为远程格式 */
     convertToRemoteQuery(query) {
       // 新接口中，后端会处理字段映射，前端只需要传递原始参数
@@ -481,6 +584,7 @@ export default {
     /** 查询参数列表 */
     getList() {
       this.loading = true;
+      const requestDataSource = this.dataSource;
       let apiParams = { ...this.queryParams };
 
       // 如果是远程数据，需要转换查询参数
@@ -494,6 +598,9 @@ export default {
         listRemotePersonBasicInfo(apiParams);
 
       apiPromise.then(response => {
+        if (this.dataSource !== requestDataSource) {
+          return;
+        }
         if (response && typeof response.code !== 'undefined' && response.code !== 200) {
           this.personBasicInfoList = [];
           this.total = 0;
@@ -507,6 +614,9 @@ export default {
         this.total = total;
         this.loading = false;
       }).catch(error =>{
+        if (this.dataSource !== requestDataSource) {
+          return;
+        }
         console.error("获取数据失败", error);
         this.$message.error('获取数据失败，请稍后重试');
         this.loading = false;
@@ -532,7 +642,7 @@ export default {
 
     /**                      按钮方法                     */
     /** 切换数据源 */
-    switchDataSource(source) {
+    async switchDataSource(source) {
       if (this.dataSource === source) {
         // 已经是当前数据源，不执行切换
         return;
@@ -541,20 +651,32 @@ export default {
       // 根据切换方向显示不同的提示
       if (source === 'local') {
         this.$message.success('已切换到本地数据（可编辑模式）');
+        this.resetQuery();
+        this.latestSyncBatchList = [];
       } else {
         this.$message.info('已切换到院主数据（只读模式）');
+        this.personBasicInfoList = [];
+        this.total = 0;
+        this.loading = false;
+        this.remotePreCheckLoading = true;
+        try {
+          const connected = await this.checkRemoteConnectivity(false);
+          this.loadLatestSyncBatch();
+          if (connected) {
+            this.resetQuery();
+          } else {
+            this.personBasicInfoList = [];
+            this.total = 0;
+            this.loading = false;
+          }
+        } finally {
+          this.remotePreCheckLoading = false;
+        }
       }
       // 清空选择
       this.ids = [];
       this.single = true;
       this.multiple = true;
-      // 重置查询并重新加载数据
-      this.resetQuery();
-      if (source === 'remote') {
-        this.loadLatestSyncBatch();
-      } else {
-        this.latestSyncBatchList = [];
-      }
     },
     /**   表单重置   */
     reset() {
@@ -970,6 +1092,15 @@ export default {
   font-size: 12px;
 }
 
+.remote-precheck-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: #409eff;
+  font-size: 12px;
+}
+
 .schedule-switch-box {
   display: flex;
   align-items: center;
@@ -980,5 +1111,26 @@ export default {
   margin-right: 8px;
   color: #606266;
   font-size: 12px;
+}
+
+.remote-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.remote-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.remote-status-ok {
+  background-color: #67c23a;
+}
+
+.remote-status-fail {
+  background-color: #f56c6c;
 }
 </style>

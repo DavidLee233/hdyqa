@@ -24,6 +24,7 @@ import com.sysware.mainData.domain.vo.HdlPersonJobInfoVo;
 import com.sysware.mainData.service.IHdlMainDataMappingService;
 import com.sysware.mainData.service.IHdlMainDataBackupRecordService;
 import com.sysware.mainData.service.IHdlMainDataSyncBatchService;
+import com.sysware.mainData.service.IMainDataConnectivityService;
 import com.sysware.mainData.service.IRemoteDataService;
 import com.sysware.mainData.service.IRemoteTokenService;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +90,9 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
     private static final String SYNC_MODE_FULL = "full";
     private static final String SYNC_MODE_INCREMENTAL = "incremental";
     private static final String SYNC_MODE_AUTO = "auto";
+    private static final String CALL_SOURCE_SYNC = "sync";
+    private static final String CALL_SOURCE_QUERY = "query";
+    private static final String CALL_SOURCE_EXPORT = "export";
     private static final int REMOTE_PAGE_SIZE = 500;
     private static final int MAX_REMOTE_PAGE = 2000;
     private static final List<String> INCREMENTAL_FIELD_CANDIDATES = Arrays.asList(
@@ -130,6 +134,9 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
     @Autowired
     private IHdlMainDataBackupRecordService backupRecordService;
 
+    @Autowired
+    private IMainDataConnectivityService connectivityService;
+
     @Value("${main-data.sync-backup-min-interval-minutes:60}")
     private long syncBackupMinIntervalMinutes;
     @Value("${main-data.sync-audit-log-dir:logs}")
@@ -152,7 +159,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
         return queryRemoteData(
             params,
             TYPE_ORG_DEPT,
-            remoteDataConfig.getOrgnizationDepartmentPath(),
+            remoteDataConfig.getOrganizationDepartmentPath(),
             buildOrgFilterMatchTypes(),
             buildOrgFilterDefaultRemoteFields()
         );
@@ -242,15 +249,23 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                                                  boolean allowRetryOnUnauthorized,
                                                  int retryCountLeft) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : params;
+        long startAt = System.currentTimeMillis();
+        String callSource = resolveCallSource(safeParams);
+        String requestUrl = null;
+        boolean skipAuditLog = false;
+        boolean success = false;
+        int recordCount = 0;
+        String message = "success";
         try {
+            int pageNum = parseInt(safeParams.get("pageNum"), 0);
+            int pageSize = parseInt(safeParams.get("pageSize"), 10);
+            String url = remoteDataConfig.buildRemoteUrl(apiPath) + "?pageNum=" + pageNum + "&pageSize=" + pageSize;
+            requestUrl = url;
+
             String token = remoteTokenService.getValidToken();
             if (StringUtils.isEmpty(token)) {
                 throw new RuntimeException("无法获取有效的API Token");
             }
-
-            int pageNum = parseInt(safeParams.get("pageNum"), 0);
-            int pageSize = parseInt(safeParams.get("pageSize"), 10);
-            String url = remoteDataConfig.getApiUrl() + apiPath + "?pageNum=" + pageNum + "&pageSize=" + pageSize;
 
             Map<String, Object> requestBody = buildQueryRequestBody(safeParams, mainDataType, filterMatchTypes, defaultRemoteFields);
 
@@ -268,23 +283,31 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                 throw new RuntimeException("查询远端主数据失败，状态码: " + response.getStatusCode());
             }
 
-            return convertResponseFormat(response.getBody(), mainDataType);
+            Map<String, Object> result = convertResponseFormat(response.getBody(), mainDataType);
+            success = true;
+            recordCount = resolveRowCount(result);
+            return result;
         } catch (HttpClientErrorException.Unauthorized e) {
+            message = "远端鉴权失败: " + e.getStatusCode();
             if (!allowRetryOnUnauthorized) {
                 throw new RuntimeException("Token无效且刷新后重试失败", e);
             }
             logger.warn("令牌无效或过期，刷新后重试一次。类型={}", mainDataType);
             remoteTokenService.refreshToken();
+            skipAuditLog = true;
             return queryRemoteData(safeParams, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields, false, retryCountLeft);
         } catch (HttpClientErrorException e) {
+            message = "远端接口HTTP错误: " + e.getStatusCode();
             logger.error("查询远端主数据请求错误，类型={}，状态码={}，响应体={}",
                 mainDataType, e.getStatusCode(), e.getResponseBodyAsString(), e);
             throw new RuntimeException("查询远端主数据HTTP错误: " + e.getStatusCode(), e);
         } catch (ResourceAccessException e) {
+            message = "远端接口连接失败: " + e.getMessage();
             if (retryCountLeft > 0) {
                 int currentAttempt = Math.max(remoteQueryRetryCount - retryCountLeft + 1, 1);
                 logger.warn("远端接口连接失败，将重试。类型={}，第{}次重试，剩余重试次数={}，异常={}",
                     mainDataType, currentAttempt, retryCountLeft - 1, e.getMessage());
+                skipAuditLog = true;
                 return queryRemoteData(
                     safeParams,
                     mainDataType,
@@ -298,8 +321,21 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             logger.error("远端接口连接失败，类型={}，异常信息={}", mainDataType, e.getMessage(), e);
             throw new RuntimeException("远端API连接失败: " + e.getMessage(), e);
         } catch (Exception e) {
+            message = StrUtil.blankToDefault(e.getMessage(), "远端查询异常");
             logger.error("查询远端主数据异常，类型={}", mainDataType, e);
             throw new RuntimeException("查询远端主数据异常: " + e.getMessage(), e);
+        } finally {
+            if (!skipAuditLog && StrUtil.isNotBlank(requestUrl)) {
+                safeRecordRemoteCall(
+                    requestUrl,
+                    mainDataType,
+                    callSource,
+                    success,
+                    recordCount,
+                    System.currentTimeMillis() - startAt,
+                    message
+                );
+            }
         }
     }
     /**
@@ -632,7 +668,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             List<Map<String, Object>> remoteRows = fetchRemoteRowsForSync(
                 stats,
                 TYPE_ORG_DEPT,
-                remoteDataConfig.getOrgnizationDepartmentPath(),
+                remoteDataConfig.getOrganizationDepartmentPath(),
                 buildOrgFilterMatchTypes(),
                 buildOrgFilterDefaultRemoteFields()
             );
@@ -1033,6 +1069,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             Map<String, Object> params = new HashMap<>();
             params.put("pageNum", pageNum);
             params.put("pageSize", pageSize);
+            params.put("_callSource", CALL_SOURCE_SYNC);
             Map<String, Object> result = queryRemoteData(params, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields);
             List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
             if (rows == null || rows.isEmpty()) {
@@ -1092,6 +1129,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             params.put("pageSize", pageSize);
             params.put("sortField", incrementalField);
             params.put("sortOrder", "desc");
+            params.put("_callSource", CALL_SOURCE_SYNC);
             Map<String, Object> result = queryRemoteData(params, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields);
             List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
             if (rows == null || rows.isEmpty()) {
@@ -1153,6 +1191,7 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
         Map<String, Object> params = new HashMap<>();
         params.put("pageNum", 0);
         params.put("pageSize", 1);
+        params.put("_callSource", CALL_SOURCE_SYNC);
         Map<String, Object> result = queryRemoteData(params, mainDataType, apiPath, filterMatchTypes, defaultRemoteFields);
         Object rowsObj = result.get("rows");
         if (!(rowsObj instanceof List) || ((List<?>) rowsObj).isEmpty()) {
@@ -1887,7 +1926,9 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
                                         Class<T> voClass,
                                         String sheetName) {
         try {
-            Map<String, Object> queryResult = queryFunction.apply(params);
+            Map<String, Object> exportParams = params == null ? new HashMap<>() : new HashMap<>(params);
+            exportParams.put("_callSource", CALL_SOURCE_EXPORT);
+            Map<String, Object> queryResult = queryFunction.apply(exportParams);
             List<Map<String, Object>> rows = (List<Map<String, Object>>) queryResult.get("rows");
             List<T> exportList = convertRowsToVoList(rows, voClass);
 
@@ -1950,6 +1991,54 @@ public class RemoteDataServiceImpl implements IRemoteDataService {
             normalized.put(StrUtil.toCamelCase(key), value);
         }
         return normalized;
+    }
+
+    private String resolveCallSource(Map<String, Object> params) {
+        if (params == null || params.isEmpty()) {
+            return CALL_SOURCE_QUERY;
+        }
+        Object raw = params.get("_callSource");
+        if (raw == null) {
+            return CALL_SOURCE_QUERY;
+        }
+        String value = raw.toString().trim().toLowerCase(Locale.ROOT);
+        if (CALL_SOURCE_SYNC.equals(value) || CALL_SOURCE_QUERY.equals(value) || CALL_SOURCE_EXPORT.equals(value)) {
+            return value;
+        }
+        return CALL_SOURCE_QUERY;
+    }
+
+    private int resolveRowCount(Map<String, Object> result) {
+        if (result == null || result.isEmpty()) {
+            return 0;
+        }
+        Object rowsObj = result.get("rows");
+        if (rowsObj instanceof List) {
+            return ((List<?>) rowsObj).size();
+        }
+        return parseInt(result.get("total"), 0);
+    }
+
+    private void safeRecordRemoteCall(String requestUrl,
+                                      String dataType,
+                                      String callSource,
+                                      boolean success,
+                                      int recordCount,
+                                      long durationMs,
+                                      String message) {
+        try {
+            connectivityService.recordRemoteCall(
+                requestUrl,
+                dataType,
+                callSource,
+                success,
+                recordCount,
+                durationMs,
+                StrUtil.blankToDefault(message, success ? "success" : "failed")
+            );
+        } catch (Exception ignored) {
+            // keep remote query flow safe
+        }
     }
 
     private static class SyncStats {

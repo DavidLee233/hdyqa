@@ -7,30 +7,83 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * @project npic
- * @description RemoteDataConfig配置类，负责注册远端主数据相关运行组件与参数。
- * @author DavidLee233
- * @date 2026/3/20
- */
 @Data
 @Component
 @ConfigurationProperties(prefix = "remote.data")
 public class RemoteDataConfig {
-    // 远程API配置
+
+    /**
+     * Base URL of remote main-data platform, e.g. http://139.10.22.52
+     */
     private String apiUrl = "http://139.10.22.52";
+
+    /**
+     * Relative login path.
+     */
+    private String loginPath = "/api/users/login";
+
     private String username = "es_sjpt";
     private String password = "xwzx1107??";
 
-    // Token相关配置
-    private long tokenExpireTime = 600000; // 10分钟，单位毫秒
-    private long tokenRefreshTime = 300000; // 5分钟，提前刷新
-
-    // 字段映射配置（前端传过来的字段名需要映射到远程字段名）
+    private long tokenExpireTime = 600000;
+    private long tokenRefreshTime = 300000;
     private Map<String, String> fieldMappings = new HashMap<>();
 
-    // 接口查询配置
+    /**
+     * Legacy typo key for compatibility.
+     */
     private String orgnizationDepartmentPath = "/api/mdm/NPIC_HR_DEPARTMENT_ZH/query";
+
+    /**
+     * Correct key for organization department path.
+     */
+    private String organizationDepartmentPath;
+
     private String personBasicPath = "/api/mdm/NPIC_HR_PERSONINFO/query";
     private String personJobPath = "/api/mdm/NPIC_HR_PERSONJOB/query";
+
+    /**
+     * Use correct spelling first, fallback to legacy typo key.
+     */
+    public String getOrganizationDepartmentPath() {
+        if (hasText(organizationDepartmentPath)) {
+            return organizationDepartmentPath;
+        }
+        return orgnizationDepartmentPath;
+    }
+
+    /**
+     * Safely concatenate base URL and relative path.
+     */
+    public String buildRemoteUrl(String relativePath) {
+        String base = trimTrailingSlash(apiUrl);
+        String path = normalizePath(relativePath);
+        return base + path;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (!hasText(value)) {
+            return "";
+        }
+        String result = value.trim();
+        while (result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
+    }
+
+    private String normalizePath(String value) {
+        if (!hasText(value)) {
+            return "";
+        }
+        String result = value.trim();
+        if (!result.startsWith("/")) {
+            result = "/" + result;
+        }
+        return result;
+    }
 }
