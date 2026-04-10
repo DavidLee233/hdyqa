@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-dialog
     title="连接检测"
     :visible.sync="visible"
@@ -47,34 +47,26 @@
       </el-table-column>
       <el-table-column label="IP连接状况" width="240" align="center">
         <template slot-scope="scope">
-          <span
-            :class="String(scope.row.ipConnectStatus) === '1' ? 'status-ok' : 'status-fail'"
-          >
+          <span :class="String(scope.row.ipConnectStatus) === '1' ? 'status-ok' : 'status-fail'">
             {{ String(scope.row.ipConnectStatus) === '1' ? '已连接' : '未连接' }}
           </span>
           <span class="status-msg">{{ scope.row.ipCheckMessage || '' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="端口" width="120" align="center">
+      <el-table-column label="端口" width="140" align="center">
         <template slot-scope="scope">
-          <el-select
-            v-model="scope.row.systemPort"
+          <el-input
+            v-model.trim="scope.row.systemPort"
             size="mini"
-            placeholder="端口"
-            @change="markRowEditing(scope.row)"
-          >
-            <el-option :value="80" label="80" />
-            <el-option :value="8080" label="8080" />
-            <el-option :value="8081" label="8081" />
-            <el-option :value="443" label="443" />
-          </el-select>
+            maxlength="5"
+            placeholder="请输入端口"
+            @input="markRowEditing(scope.row)"
+          />
         </template>
       </el-table-column>
       <el-table-column label="端口可用状况" width="260" align="center">
         <template slot-scope="scope">
-          <span
-            :class="String(scope.row.portConnectStatus) === '1' ? 'status-ok' : 'status-fail'"
-          >
+          <span :class="String(scope.row.portConnectStatus) === '1' ? 'status-ok' : 'status-fail'">
             {{ String(scope.row.portConnectStatus) === '1' ? '可用' : '不可用' }}
           </span>
           <span class="status-msg">{{ scope.row.portCheckMessage || '' }}</span>
@@ -223,11 +215,7 @@ export default {
       const copy = { ...row }
       copy._rowKey = copy.id || `new_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
       copy._editing = false
-      if (![80, 8080, 8081, 443].includes(Number(copy.systemPort))) {
-        copy.systemPort = 80
-      } else {
-        copy.systemPort = Number(copy.systemPort)
-      }
+      copy.systemPort = copy.systemPort ? String(copy.systemPort) : '80'
       copy.ipConnectStatus = String(copy.ipConnectStatus || copy.lastConnectStatus || '0')
       copy.portConnectStatus = String(copy.portConnectStatus || copy.lastConnectStatus || '0')
       copy.ipCheckMessage = copy.ipCheckMessage || ''
@@ -247,7 +235,7 @@ export default {
         id: null,
         systemName: '',
         systemIp: '',
-        systemPort: 80,
+        systemPort: '80',
         lastConnectStatus: '0',
         lastCheckMessage: ''
       })
@@ -328,8 +316,13 @@ export default {
           this.$message.warning('下游系统IP不能为空')
           return
         }
-        if (![80, 8080, 8081, 443].includes(Number(item.systemPort))) {
-          this.$message.warning('端口仅支持 80、8080、8081、443')
+        if (!/^\d+$/.test(String(item.systemPort || ''))) {
+          this.$message.warning('端口必须为数字')
+          return
+        }
+        const port = Number(item.systemPort)
+        if (port < 1 || port > 65535) {
+          this.$message.warning('端口必须在1到65535之间')
           return
         }
       }
@@ -339,7 +332,7 @@ export default {
           id: item.id || null,
           systemName: item.systemName,
           systemIp: item.systemIp,
-          systemPort: item.systemPort || 80
+          systemPort: Number(item.systemPort) || 80
         })
       })
       Promise.all(tasks).then(() => {
